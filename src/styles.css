@@ -142,3 +142,96 @@
     color: var(--color-foreground);
   }
 }
+
+/* ---------- Doubtbook: notebook design system ---------- */
+
+:root {
+  --rule: 2.2rem;
+  --paper: oklch(0.972 0.018 92);
+  --paper-edge: oklch(0.93 0.025 90);
+  --paper-line: oklch(0.85 0.04 240 / 55%);
+  --paper-margin: oklch(0.68 0.16 20 / 60%);
+  --desk: oklch(0.29 0.03 250);
+  --desk-2: oklch(0.21 0.03 255);
+  --ink: oklch(0.29 0.03 265);
+  --ink-blue: oklch(0.5 0.16 258);
+  --ink-red: oklch(0.55 0.19 22);
+  --ink-green: oklch(0.5 0.13 155);
+  --ink-marker: oklch(0.62 0.2 45);
+  --shadow-book: 0 24px 60px -18px oklch(0 0 0 / 45%);
+}
+
+@theme inline {
+  --font-hand: "Caveat", "Patrick Hand", cursive;
+  --font-hand-alt: "Patrick Hand", cursive;
+  --color-paper: var(--paper);
+  --color-paper-edge: var(--paper-edge);
+  --color-desk: var(--desk);
+  --color-desk-2: var(--desk-2);
+  --color-ink: var(--ink);
+  --color-ink-blue: var(--ink-blue);
+  --color-ink-red: var(--ink-red);
+  --color-ink-green: var(--ink-green);
+  --color-ink-marker: var(--ink-marker);
+}
+
+.desk-bg {
+  background:
+    radial-gradient(120% 80% at 50% 0%, var(--desk) 0%, var(--desk-2) 70%),
+    var(--desk-2);
+}
+
+.paper {
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--rule) - 1px),
+    var(--paper-line) calc(var(--rule) - 1px),
+    var(--paper-line) var(--rule)
+  );
+  background-position: 0 5px;
+}
+
+.paper-margin::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2.4rem;
+  width: 1px;
+  background: var(--paper-margin);
+}
+
+.hand-line {
+  height: var(--rule);
+  line-height: var(--rule);
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.glass {
+  background: color-mix(in oklab, var(--paper) 12%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid oklch(1 0 0 / 18%);
+}
+
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  vertical-align: -0.15em;
+  margin-left: 1px;
+  background: currentColor;
+  animation: caret-blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes caret-blink {
+  to {
+    opacity: 0;
+  }
+}
