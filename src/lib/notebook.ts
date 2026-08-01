@@ -90,7 +90,10 @@ export type Line = {
   text: string;
   offset: number; // global char offset for the writing animation
   first: boolean; // first visual line of a block (shows bullet/indent)
-  qNumber?: number;
+  qNumber?: number | undefined;
+  svg?: string | undefined;
+  rows?: number | undefined;
+
   svg?: string;
   rows?: number;
 };
