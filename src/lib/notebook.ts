@@ -197,31 +197,23 @@ export function paginate(
     }
 
     let current: Line[] = [];
+    let used = 0;
     let pageOfEntry = 0;
     let qCount = 0;
     const push = () => {
-      pages.push({ entryIndex, qNumber: entryIndex + 1, pageOfEntry, lines: current });
+      pages.push({ entryIndex, qNumber: entryIndex + 1, pageOfEntry, lines: current, used });
       pageOfEntry += 1;
       current = [];
+      used = 0;
     };
 
     for (const block of blocks) {
       if (block.kind === "draw") {
-        const rows = block.rows ?? 6;
-        if (current.length + rows > linesPerPage && current.length) push();
-        current.push({
-          kind: "draw",
-          text: "",
-          offset,
-          first: true,
-          svg: block.svg,
-          rows: Math.min(rows, linesPerPage),
-        });
+        const rows = Math.min(block.rows ?? 6, linesPerPage);
+        if (used + rows > linesPerPage && used) push();
+        current.push({ kind: "draw", text: "", offset, first: true, svg: block.svg, rows });
+        used += rows;
         offset += 40;
-        for (let k = 1; k < Math.min(rows, linesPerPage); k += 1) {
-          if (current.length >= linesPerPage) break;
-          current.push({ kind: "blank", text: "", offset, first: false });
-        }
         continue;
       }
       const isQ = block.kind === "q";
@@ -234,13 +226,15 @@ export function paginate(
             ? [block.text]
             : wrap(block.text, Math.max(14, charsPerLine - indent));
       visual.forEach((text, i) => {
-        if (current.length >= linesPerPage) push();
+        if (used >= linesPerPage) push();
         const line: Line = { kind: block.kind, text, offset, first: i === 0 };
         if (isQ) line.qNumber = qCount;
         current.push(line);
+        used += 1;
         offset += text.length + 1;
       });
     }
+
     if (current.length || pageOfEntry === 0) push();
   });
 
