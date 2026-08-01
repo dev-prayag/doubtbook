@@ -4,16 +4,18 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  Download,
   ImagePlus,
   Menu,
   Pencil,
   Plus,
   Send,
   Trash2,
-  X,
 } from "lucide-react";
 import { NotebookPage } from "./NotebookPage";
 import { LassoLayer, type LassoSelection } from "./LassoLayer";
+import { DoubtOverlay, type DoubtMessage } from "./DoubtOverlay";
+import { OcrPanel } from "./OcrPanel";
 import {
   deleteChat,
   getChat,
@@ -24,6 +26,7 @@ import {
   type Chat,
   type Entry,
 } from "@/lib/notebook";
+import { buildPdf, capturePage, nextFrame } from "@/lib/pdf";
 
 function persist(chat: Chat) {
   try {
@@ -45,15 +48,21 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   const [image, setImage] = useState<string | undefined>();
   const [lasso, setLasso] = useState(false);
   const [selection, setSelection] = useState<LassoSelection | null>(null);
-  const [lassoInput, setLassoInput] = useState("");
+  const [doubtMessages, setDoubtMessages] = useState<DoubtMessage[]>([]);
+  const [doubtBusy, setDoubtBusy] = useState(false);
+  const [doubtError, setDoubtError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [ocrEntryId, setOcrEntryId] = useState<string | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const pageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const animating = useRef(false);
   const started = useRef<string | null>(null);
+  const ocrStarted = useRef<string | null>(null);
 
   /* ---------- load chat ---------- */
   useEffect(() => {
@@ -71,7 +80,9 @@ export function NotebookApp({ chatId }: { chatId: string }) {
     const el = pageRef.current;
     if (!el) return;
     const measure = () => {
-      const rule = parseFloat(getComputedStyle(document.documentElement).fontSize) * 2.2;
+      const rule =
+        parseFloat(getComputedStyle(el).getPropertyValue("--rule")) ||
+        parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.8;
       const probe = document.createElement("div");
       probe.className = "hand-line";
       probe.style.position = "absolute";
@@ -102,8 +113,8 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   useEffect(() => {
     if (reveal >= totalChars) return;
     const id = window.setInterval(() => {
-      setReveal((r) => Math.min(totalChars, r + 5));
-    }, 24);
+      setReveal((r) => Math.min(totalChars, r + 6));
+    }, 20);
     return () => window.clearInterval(id);
   }, [reveal, totalChars]);
 
@@ -122,15 +133,14 @@ export function NotebookApp({ chatId }: { chatId: string }) {
     if (pageIndex > Math.max(0, pages.length - 1)) setPageIndex(Math.max(0, pages.length - 1));
   }, [pages.length, pageIndex]);
 
-  /* ---------- streaming ---------- */
+  /* ---------- streaming helper ---------- */
   const stream = useCallback(
     async (
       body: Record<string, unknown>,
       onChunk: (chunk: string) => void,
       onDone: () => void,
+      onError: (msg: string) => void,
     ) => {
-      setBusy(true);
-      setError(null);
       try {
         const res = await fetch("/api/solve", {
           method: "POST",
@@ -138,7 +148,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
           body: JSON.stringify(body),
         });
         if (!res.ok || !res.body) {
-          setError(
+          onError(
             res.status === 429
               ? "Too many questions right now — try again in a moment."
               : res.status === 402
@@ -154,9 +164,8 @@ export function NotebookApp({ chatId }: { chatId: string }) {
           if (value) onChunk(value);
         }
       } catch {
-        setError("Network problem while writing the answer.");
+        onError("Network problem while writing the answer.");
       } finally {
-        setBusy(false);
         onDone();
       }
     },
@@ -166,39 +175,121 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   const runEntry = useCallback(
     async (entry: Entry, priorContext: string) => {
       animating.current = true;
+      setBusy(true);
+      setError(null);
       await stream(
         {
           mode: entry.mode,
           question: entry.question,
           imageDataUrl: entry.imageDataUrl,
+          ocrQuestions: entry.ocr?.questions,
           context: priorContext,
         },
         (chunk) => {
-          setChat((c) => {
-            if (!c) return c;
-            const entries = c.entries.map((e) =>
-              e.id === entry.id ? { ...e, answer: e.answer + chunk } : e,
-            );
-            return { ...c, entries };
-          });
+          setChat((c) =>
+            c
+              ? {
+                  ...c,
+                  entries: c.entries.map((e) =>
+                    e.id === entry.id ? { ...e, answer: e.answer + chunk } : e,
+                  ),
+                }
+              : c,
+          );
         },
         () => {
+          setBusy(false);
           setChat((c) => {
             if (c) persist(c);
             setChats(loadChats());
             return c;
           });
         },
+        setError,
       );
     },
     [stream],
   );
+
+  /* ---------- photo: read the page before solving ---------- */
+  useEffect(() => {
+    if (!chat) return;
+    const pending = chat.entries.find(
+      (e) => e.imageDataUrl && !e.ocrConfirmed && e.answer === "" && !e.ocr,
+    );
+    if (!pending || ocrStarted.current === pending.id) return;
+    ocrStarted.current = pending.id;
+    setOcrEntryId(pending.id);
+    setOcrLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/ocr", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ imageDataUrl: pending.imageDataUrl }),
+        });
+        const data = res.ok
+          ? ((await res.json()) as { raw: string; questions: string[] })
+          : { raw: "", questions: [] };
+        setChat((c) =>
+          c
+            ? {
+                ...c,
+                entries: c.entries.map((e) => (e.id === pending.id ? { ...e, ocr: data } : e)),
+              }
+            : c,
+        );
+      } catch {
+        setChat((c) =>
+          c
+            ? {
+                ...c,
+                entries: c.entries.map((e) =>
+                  e.id === pending.id ? { ...e, ocr: { raw: "", questions: [] } } : e,
+                ),
+              }
+            : c,
+        );
+      } finally {
+        setOcrLoading(false);
+      }
+    })();
+  }, [chat]);
+
+  const confirmOcr = () => {
+    if (!chat || !ocrEntryId) return;
+    const entry = chat.entries.find((e) => e.id === ocrEntryId);
+    setOcrEntryId(null);
+    if (!entry) return;
+    const first = entry.ocr?.questions[0];
+    const confirmed: Entry = {
+      ...entry,
+      ocrConfirmed: true,
+      question: first && entry.question.startsWith("Solve the question") ? first : entry.question,
+    };
+    const next: Chat = {
+      ...chat,
+      title: chat.entries[0]?.id === entry.id && first ? first.slice(0, 60) : chat.title,
+      entries: chat.entries.map((e) => (e.id === entry.id ? confirmed : e)),
+    };
+    setChat(next);
+    persist(next);
+  };
+
+  const cancelOcr = () => {
+    if (!chat || !ocrEntryId) return;
+    const next: Chat = { ...chat, entries: chat.entries.filter((e) => e.id !== ocrEntryId) };
+    setOcrEntryId(null);
+    setChat(next);
+    persist(next);
+  };
 
   /* ---------- auto-run a pending question ---------- */
   useEffect(() => {
     if (!chat) return;
     const last = chat.entries[chat.entries.length - 1];
     if (!last || last.answer !== "" || busy || started.current === last.id) return;
+    if (last.imageDataUrl && !last.ocrConfirmed) return;
     started.current = last.id;
     const prior = chat.entries
       .slice(0, -1)
@@ -229,46 +320,68 @@ export function NotebookApp({ chatId }: { chatId: string }) {
     inputRef.current?.focus();
   };
 
-  const askLasso = () => {
-    if (!chat || !selection || busy || !lassoInput.trim()) return;
-    const last = chat.entries[chat.entries.length - 1];
-    if (!last) return;
-    const question = lassoInput.trim();
-    setLassoInput("");
+  /* ---------- lasso doubt: answered in an overlay, not on the page ---------- */
+  const askDoubt = useCallback(
+    (question: string) => {
+      if (!chat || !selection) return;
+      const last = chat.entries[chat.entries.length - 1];
+      setDoubtError(null);
+      setDoubtBusy(true);
+      setDoubtMessages((m) => [...m, { role: "you", text: question }, { role: "ai", text: "" }]);
+      const history = doubtMessages
+        .map((m) => `${m.role === "you" ? "Student" : "Tutor"}: ${m.text}`)
+        .join("\n");
+      void stream(
+        {
+          mode: "lasso",
+          question,
+          selection: selection.text,
+          context: `${history}\n\n${last?.answer ?? ""}`,
+        },
+        (chunk) =>
+          setDoubtMessages((m) =>
+            m.map((msg, i) => (i === m.length - 1 ? { ...msg, text: msg.text + chunk } : msg)),
+          ),
+        () => setDoubtBusy(false),
+        setDoubtError,
+      );
+    },
+    [chat, selection, stream, doubtMessages],
+  );
+
+  const closeDoubt = () => {
     setSelection(null);
+    setDoubtMessages([]);
+    setDoubtError(null);
     setLasso(false);
-    const marker = `\n\n`;
-    setChat((c) =>
-      c
-        ? {
-            ...c,
-            entries: c.entries.map((e) =>
-              e.id === last.id ? { ...e, answer: e.answer + marker } : e,
-            ),
-          }
-        : c,
-    );
-    animating.current = true;
-    void stream(
-      { mode: "lasso", question, selection: selection.text, context: last.answer },
-      (chunk) =>
-        setChat((c) =>
-          c
-            ? {
-                ...c,
-                entries: c.entries.map((e) =>
-                  e.id === last.id ? { ...e, answer: e.answer + chunk } : e,
-                ),
-              }
-            : c,
-        ),
-      () =>
-        setChat((c) => {
-          if (c) persist(c);
-          setChats(loadChats());
-          return c;
-        }),
-    );
+  };
+
+  /* ---------- export the notebook as a PDF ---------- */
+  const exportPdf = async () => {
+    if (!pages.length || exporting) return;
+    setExporting(true);
+    setMenuOpen(false);
+    const wasPage = pageIndex;
+    const wasLasso = lasso;
+    setLasso(false);
+    animating.current = false;
+    setReveal(Number.MAX_SAFE_INTEGER);
+    try {
+      const shots: string[] = [];
+      for (let i = 0; i < pages.length; i += 1) {
+        setPageIndex(i);
+        await nextFrame(360);
+        const el = pageRef.current?.querySelector<HTMLElement>(".paper");
+        if (el) shots.push(await capturePage(el));
+      }
+      await buildPdf(shots, chat?.title ?? "notebook");
+    } catch {
+      setError("Could not build the PDF. Please try again.");
+    } finally {
+      setPageIndex(wasPage);
+      setLasso(wasLasso);
+      setExporting(false);
+    }
   };
 
   const onFile = (file: File | undefined) => {
@@ -279,6 +392,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   };
 
   const page = pages[pageIndex];
+  const ocrEntry = chat?.entries.find((e) => e.id === ocrEntryId);
 
   return (
     <div className="desk-bg flex h-[100dvh] w-full flex-col overflow-hidden">
@@ -295,48 +409,13 @@ export function NotebookApp({ chatId }: { chatId: string }) {
               pageNumber={pageIndex + 1}
               linesPerPage={dims.linesPerPage}
             />
-            <LassoLayer active={lasso} onSelect={setSelection} />
-
-            {selection && (
-              <div
-                className="absolute z-30 w-60 rounded-lg border border-ink-marker/40 bg-paper p-2 shadow-lg"
-                style={{
-                  left: Math.min(Math.max(4, selection.rect.left), (pageRef.current?.clientWidth ?? 300) - 250),
-                  top: Math.min(
-                    selection.rect.top + selection.rect.height + 6,
-                    (pageRef.current?.clientHeight ?? 300) - 110,
-                  ),
-                }}
-              >
-                <p className="mb-1 line-clamp-2 font-[family-name:var(--font-hand)] text-sm text-ink/70">
-                  “{selection.text.slice(0, 70)}”
-                </p>
-                <div className="flex gap-1">
-                  <input
-                    autoFocus
-                    value={lassoInput}
-                    onChange={(e) => setLassoInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && askLasso()}
-                    placeholder="What about this?"
-                    className="min-w-0 flex-1 rounded border border-ink/20 bg-transparent px-2 py-1 text-sm text-ink outline-none placeholder:text-ink/40"
-                  />
-                  <button
-                    onClick={askLasso}
-                    className="rounded bg-ink-marker px-2 text-paper"
-                    aria-label="Ask about selection"
-                  >
-                    <Send className="size-4" />
-                  </button>
-                  <button
-                    onClick={() => setSelection(null)}
-                    className="rounded px-1 text-ink/50"
-                    aria-label="Cancel"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <LassoLayer
+              active={lasso}
+              onSelect={(sel) => {
+                setSelection(sel);
+                setDoubtMessages([]);
+              }}
+            />
 
             {pages.length === 0 && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center">
@@ -363,7 +442,10 @@ export function NotebookApp({ chatId }: { chatId: string }) {
             </button>
             <div className="glass flex items-center gap-1 rounded-xl px-1 py-1 text-paper/90">
               <button
-                onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+                onClick={() => {
+                  animating.current = false;
+                  setPageIndex((i) => Math.max(0, i - 1));
+                }}
                 disabled={pageIndex === 0}
                 className="grid size-8 place-items-center rounded-lg disabled:opacity-30"
                 aria-label="Previous page"
@@ -439,7 +521,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
               }}
               rows={1}
               placeholder={mode === "notes" ? "Topic for notes…" : "Ask your next doubt…"}
-              className="max-h-24 min-h-9 flex-1 resize-none bg-transparent py-1.5 font-[family-name:var(--font-hand)] text-xl text-paper outline-none placeholder:text-paper/40"
+              className="max-h-24 min-h-9 flex-1 resize-none bg-transparent py-1.5 font-[family-name:var(--font-hand)] text-lg text-paper outline-none placeholder:text-paper/40"
             />
             <button
               onClick={ask}
@@ -452,6 +534,29 @@ export function NotebookApp({ chatId }: { chatId: string }) {
           </div>
         </div>
       </div>
+
+      {/* lasso doubt overlay */}
+      {selection && (
+        <DoubtOverlay
+          selection={selection.text}
+          messages={doubtMessages}
+          busy={doubtBusy}
+          error={doubtError}
+          onAsk={askDoubt}
+          onClose={closeDoubt}
+        />
+      )}
+
+      {/* photo reader */}
+      {ocrEntry?.imageDataUrl && (
+        <OcrPanel
+          image={ocrEntry.imageDataUrl}
+          ocr={ocrEntry.ocr ?? null}
+          loading={ocrLoading}
+          onSolve={confirmOcr}
+          onCancel={cancelOcr}
+        />
+      )}
 
       {/* menu */}
       {menuOpen && (
@@ -472,9 +577,17 @@ export function NotebookApp({ chatId }: { chatId: string }) {
                 setMenuOpen(false);
                 void navigate({ to: "/c/$chatId", params: { chatId: id } });
               }}
-              className="mb-4 flex w-full items-center gap-2 rounded-xl bg-paper/90 px-3 py-2 text-desk-2"
+              className="mb-2 flex w-full items-center gap-2 rounded-xl bg-paper/90 px-3 py-2 text-desk-2"
             >
               <Plus className="size-4" /> New notebook
+            </button>
+            <button
+              onClick={() => void exportPdf()}
+              disabled={!pages.length || exporting}
+              className="mb-4 flex w-full items-center gap-2 rounded-xl bg-paper/10 px-3 py-2 text-sm text-paper disabled:opacity-40"
+            >
+              <Download className="size-4" />
+              {exporting ? "Building PDF…" : "Export this notebook as PDF"}
             </button>
             <ul className="space-y-1">
               {chats.map((c) => (
@@ -505,9 +618,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
               ))}
               {chats.length === 0 && <li className="text-sm text-paper/60">No saved notebooks yet.</li>}
             </ul>
-            <p className="mt-6 text-xs text-paper/50">
-              Notebooks are saved in this browser only.
-            </p>
+            <p className="mt-6 text-xs text-paper/50">Notebooks are saved in this browser only.</p>
           </div>
         </div>
       )}
