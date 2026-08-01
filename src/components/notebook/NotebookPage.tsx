@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { Line, Page } from "@/lib/notebook";
+import { InkFigure, InkText } from "./Ink";
 
 const kindClass: Record<string, string> = {
   q: "text-ink font-semibold",
@@ -7,21 +8,37 @@ const kindClass: Record<string, string> = {
   step: "text-ink-blue",
   important: "text-ink-green font-semibold",
   final: "text-ink-red font-semibold underline decoration-2 decoration-ink-red/60",
-  diagram: "text-ink font-[family-name:var(--font-hand-alt)] text-[1.05rem]",
+  diagram: "text-ink font-[family-name:var(--font-hand-alt)] text-[0.95rem]",
   p: "text-ink-blue",
+  gen: "text-ink/45 italic",
   blank: "",
 };
 
-function LineRow({ line, reveal, qNumber }: { line: Line; reveal: number; qNumber: number }) {
+function LineRow({ line, reveal }: { line: Line; reveal: number }) {
+  if (line.kind === "draw") {
+    return (
+      <InkFigure svg={line.svg ?? ""} rows={line.rows ?? 6} visible={reveal >= line.offset} />
+    );
+  }
+
   const shown = Math.max(0, Math.min(line.text.length, reveal - line.offset));
-  if (shown <= 0 && line.kind !== "blank") return <div className="hand-line" />;
-  const text = line.text.slice(0, shown);
+  if (shown <= 0 && line.kind !== "blank" && line.kind !== "gen") return <div className="hand-line" />;
   const writing = shown < line.text.length;
+
+  if (line.kind === "gen") {
+    return (
+      <div className="hand-line text-ink/45 italic">
+        <span>{line.text}</span>
+        <span className="gen-dots" />
+      </div>
+    );
+  }
+
   const prefix =
     !line.first || line.kind === "blank"
       ? ""
       : line.kind === "q"
-        ? `Q${qNumber}. `
+        ? `Q${line.qNumber ?? 1}. `
         : line.kind === "important"
           ? "★ "
           : line.kind === "final"
@@ -33,12 +50,12 @@ function LineRow({ line, reveal, qNumber }: { line: Line; reveal: number; qNumbe
   return (
     <div
       data-line
-      className={`hand-line ${kindClass[line.kind] ?? ""} ${line.kind === "h" ? "text-[1.6rem]" : ""}`}
+      className={`hand-line ${kindClass[line.kind] ?? ""} ${line.kind === "h" ? "text-[1.35rem]" : ""}`}
       style={{ paddingLeft: line.kind === "q" ? 0 : line.kind === "diagram" ? "0.2rem" : "0.6rem" }}
     >
       <span className={writing ? "caret" : ""}>
         {prefix}
-        {text}
+        <InkText text={line.text} shown={shown} />
       </span>
     </div>
   );
@@ -55,16 +72,22 @@ export function NotebookPage({
   pageNumber: number;
   linesPerPage: number;
 }) {
+  const used = useMemo(
+    () => (page?.lines ?? []).reduce((n, l) => n + (l.kind === "draw" ? (l.rows ?? 6) : 1), 0),
+    [page],
+  );
   const filler = useMemo(
-    () => Array.from({ length: Math.max(0, linesPerPage - (page?.lines.length ?? 0)) }),
-    [linesPerPage, page],
+    () => Array.from({ length: Math.max(0, linesPerPage - used) }),
+    [linesPerPage, used],
   );
 
   return (
     <div className="paper paper-margin relative h-full w-full overflow-hidden rounded-r-xl rounded-l-sm px-3 pl-14 shadow-[inset_18px_0_28px_-24px_oklch(0_0_0/45%)]">
-      {page?.lines.map((line, i) => (
-        <LineRow key={i} line={line} reveal={reveal} qNumber={page.qNumber} />
-      ))}
+      {page?.lines
+        .filter((l) => !(l.kind === "blank" && l.first === false && l.text === "" && false))
+        .map((line, i) => (
+          <LineRow key={i} line={line} reveal={reveal} />
+        ))}
       {filler.map((_, i) => (
         <div key={`f${i}`} className="hand-line" />
       ))}
