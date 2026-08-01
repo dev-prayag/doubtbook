@@ -100,6 +100,8 @@ export type Page = {
   qNumber: number;
   pageOfEntry: number;
   lines: Line[];
+  used: number;
+
 };
 
 type Block = { kind: LineKind; text: string; svg?: string; rows?: number };
