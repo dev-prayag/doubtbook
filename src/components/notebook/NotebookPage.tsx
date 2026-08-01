@@ -72,25 +72,15 @@ export function NotebookPage({
   pageNumber: number;
   linesPerPage: number;
 }) {
-  const used = useMemo(
-    () => (page?.lines ?? []).reduce((n, l) => n + (l.kind === "draw" ? (l.rows ?? 6) : 1), 0),
-    [page],
-  );
   const filler = useMemo(
-    () => Array.from({ length: Math.max(0, linesPerPage - used) }),
-    [linesPerPage, used],
+    () => Array.from({ length: Math.max(0, linesPerPage - (page?.lines.length ?? 0)) }),
+    [linesPerPage, page],
   );
 
   return (
     <div className="paper paper-margin relative h-full w-full overflow-hidden rounded-r-xl rounded-l-sm px-3 pl-14 shadow-[inset_18px_0_28px_-24px_oklch(0_0_0/45%)]">
-      {page?.lines
-        .filter((l) => !(l.kind === "blank" && l.first === false && l.text === "" && false))
-        .map((line, i) => (
-          <LineRow key={i} line={line} reveal={reveal} />
-        ))}
-      {filler.map((_, i) => (
-        <div key={`f${i}`} className="hand-line" />
-      ))}
+      {page?.lines.map((line, i) => <LineRow key={i} line={line} reveal={reveal} />)}
+
       <span className="absolute right-4 bottom-1 font-[family-name:var(--font-hand)] text-sm text-ink/45">
         {pageNumber}
       </span>
