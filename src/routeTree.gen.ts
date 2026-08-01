@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiOcrRouteImport } from './routes/api/ocr'
 import { Route as ApiSolveRouteImport } from './routes/api/solve'
 import { Route as CChatIdRouteImport } from './routes/c.$chatId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOcrRoute = ApiOcrRouteImport.update({
+  id: '/api/ocr',
+  path: '/api/ocr',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSolveRoute = ApiSolveRouteImport.update({
@@ -31,30 +37,34 @@ const CChatIdRoute = CChatIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/ocr': typeof ApiOcrRoute
   '/api/solve': typeof ApiSolveRoute
   '/c/$chatId': typeof CChatIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/ocr': typeof ApiOcrRoute
   '/api/solve': typeof ApiSolveRoute
   '/c/$chatId': typeof CChatIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/ocr': typeof ApiOcrRoute
   '/api/solve': typeof ApiSolveRoute
   '/c/$chatId': typeof CChatIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/solve' | '/c/$chatId'
+  fullPaths: '/' | '/api/ocr' | '/api/solve' | '/c/$chatId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/solve' | '/c/$chatId'
-  id: '__root__' | '/' | '/api/solve' | '/c/$chatId'
+  to: '/' | '/api/ocr' | '/api/solve' | '/c/$chatId'
+  id: '__root__' | '/' | '/api/ocr' | '/api/solve' | '/c/$chatId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiOcrRoute: typeof ApiOcrRoute
   ApiSolveRoute: typeof ApiSolveRoute
   CChatIdRoute: typeof CChatIdRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ocr': {
+      id: '/api/ocr'
+      path: '/api/ocr'
+      fullPath: '/api/ocr'
+      preLoaderRoute: typeof ApiOcrRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/solve': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiOcrRoute: ApiOcrRoute,
   ApiSolveRoute: ApiSolveRoute,
   CChatIdRoute: CChatIdRoute,
 }
