@@ -1,6 +1,5 @@
 /** Notebook -> PDF export (each notebook page becomes one PDF page). */
 export async function capturePage(el: HTMLElement): Promise<string> {
-  const { default: html2canvas } = await import("html2canvas-pro");
   el.classList.add("pdf-export");
   try {
     return await snapshot(el);
