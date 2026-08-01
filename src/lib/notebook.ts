@@ -134,13 +134,20 @@ function toBlocks(answer: string): Block[] {
       const rows = Math.min(14, Math.max(3, Number(open[1] ?? 6) || 6));
       const buf: string[] = [];
       i += 1;
-      while (i < lines.length && !/^\s*\[\/draw\]\s*$/.test(lines[i]!)) {
+      let closed = false;
+      while (i < lines.length) {
+        if (/^\s*\[\/draw\]\s*$/.test(lines[i]!)) {
+          closed = true;
+          i += 1;
+          break;
+        }
         buf.push(lines[i]!);
         i += 1;
       }
-      i += 1; // skip closing tag
       const svg = buf.join("\n").trim();
-      if (svg.includes("<svg")) blocks.push({ kind: "draw", text: "", svg, rows });
+      if (closed && svg.includes("<svg")) blocks.push({ kind: "draw", text: "", svg, rows });
+      else if (!closed) blocks.push({ kind: "gen", text: "Drawing the figure" });
+
       continue;
     }
     blocks.push(parseKind(line));
