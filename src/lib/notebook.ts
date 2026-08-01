@@ -93,9 +93,6 @@ export type Line = {
   qNumber?: number | undefined;
   svg?: string | undefined;
   rows?: number | undefined;
-
-  svg?: string;
-  rows?: number;
 };
 
 export type Page = {
