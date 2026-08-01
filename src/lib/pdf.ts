@@ -6,6 +6,7 @@ export async function capturePage(el: HTMLElement): Promise<string> {
     scale: 2,
     useCORS: true,
     logging: false,
+    ignoreElements: (node: Element) => node.hasAttribute?.("data-export-ignore"),
   });
   return canvas.toDataURL("image/jpeg", 0.92);
 }

@@ -367,6 +367,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
     animating.current = false;
     setReveal(Number.MAX_SAFE_INTEGER);
     try {
+      await nextFrame(500);
       const shots: string[] = [];
       for (let i = 0; i < pages.length; i += 1) {
         setPageIndex(i);
@@ -560,7 +561,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
 
       {/* menu */}
       {menuOpen && (
-        <div className="fixed inset-0 z-50 flex" onClick={() => setMenuOpen(false)}>
+        <div data-export-ignore className="fixed inset-0 z-50 flex" onClick={() => setMenuOpen(false)}>
           <div className="absolute inset-0 bg-desk-2/60 backdrop-blur-sm" />
           <div
             className="glass relative h-full w-80 max-w-[85vw] overflow-y-auto p-4 text-paper"
