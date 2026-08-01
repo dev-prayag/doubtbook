@@ -239,9 +239,13 @@
 /* inline LaTeX inside handwriting lines */
 .ink-math {
   display: inline-block;
-  vertical-align: -0.18em;
-  font-size: 0.86em;
+  vertical-align: -0.05em;
+  font-size: 0.95em;
   line-height: 1;
+}
+.hand-line .ink-math {
+  vertical-align: -0.16em;
+  font-size: 0.86em;
 }
 .ink-math .katex {
   font-size: 1em;
