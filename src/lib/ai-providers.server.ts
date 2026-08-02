@@ -51,7 +51,7 @@ export function hasAnyKey() {
 
 type Args = {
   system: string;
-  messages: Parameters<typeof streamText>[0]["messages"];
+  messages: NonNullable<Parameters<typeof streamText>[0]["messages"]>;
   vision?: boolean;
 };
 
