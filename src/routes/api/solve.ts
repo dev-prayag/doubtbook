@@ -83,9 +83,13 @@ FIRST clean up the question:
   question's own wording (shortened if very long), and solve each question
   right after its own "? " line. Never invent a question like
   "solve this photo" — always use the real questions from the page.
-Then for each question: restate what is given, work "> " step by step showing
-every calculation, add "! " for the rule used, and finish with "= " and the
-final answer.`;
+Then for each question, ANSWER FIRST, EXPLAIN AFTER:
+1. Immediately after the "? " line, give the final answer on an "= " line.
+2. Then a "# Explanation" heading.
+3. Then restate what is given, work "> " step by step showing every
+   calculation, and add "! " for the rule used.
+Never keep the answer for the end — the "= " answer line always comes
+before any working or explanation for that question.`;
         }
 
         const parts: Array<Record<string, unknown>> = [];
