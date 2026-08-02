@@ -80,23 +80,23 @@ export function NotebookApp({ chatId }: { chatId: string }) {
     const el = pageRef.current;
     if (!el) return;
     const measure = () => {
-      const rule =
-        parseFloat(getComputedStyle(el).getPropertyValue("--rule")) ||
-        parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.8;
       const probe = document.createElement("div");
       probe.className = "hand-line";
       probe.style.position = "absolute";
       probe.style.visibility = "hidden";
       probe.textContent = "n".repeat(60);
       el.appendChild(probe);
-      const charWidth = probe.getBoundingClientRect().width / 60 || 10;
+      const box = probe.getBoundingClientRect();
+      const charWidth = box.width / 60 || 10;
+      const rule = box.height || 28;
       probe.remove();
       const width = el.clientWidth - 64;
       setDims({
         charsPerLine: Math.max(18, Math.floor(width / charWidth)),
-        linesPerPage: Math.max(8, Math.floor((el.clientHeight - 6) / rule)),
+        linesPerPage: Math.max(6, Math.floor((el.clientHeight - 8) / rule)),
       });
     };
+
     measure();
     void document.fonts?.ready.then(measure);
     const ro = new ResizeObserver(measure);
