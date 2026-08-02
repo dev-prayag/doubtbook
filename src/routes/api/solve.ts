@@ -51,8 +51,8 @@ export const Route = createFileRoute("/api/solve")({
     handlers: {
       POST: async ({ request }) => {
         const body = (await request.json()) as Body;
-        const key = process.env["LOVABLE_API_KEY"];
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        if (!hasAnyKey())
+          return new Response("Missing GEMINI_API_KEY / GROQ_API_KEY", { status: 500 });
 
         const mode = body.mode ?? "solve";
         let system = FORMAT;
