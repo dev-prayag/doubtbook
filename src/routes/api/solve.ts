@@ -107,14 +107,11 @@ final answer.`;
           parts.push({ type: "image", image: body.imageDataUrl });
         }
 
-        const gateway = createLovableAiGatewayProvider(key);
-        const result = streamText({
-          model: gateway("google/gemini-3.6-flash"),
+        return streamWithFallback({
           system,
           messages: [{ role: "user", content: parts as never }],
+          vision: !!body.imageDataUrl,
         });
-
-        return result.toTextStreamResponse();
       },
     },
   },
