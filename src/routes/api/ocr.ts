@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { generateWithFallback, hasAnyKey } from "@/lib/ai-providers.server";
 
 type Body = { imageDataUrl?: string };
 
@@ -10,13 +9,12 @@ export const Route = createFileRoute("/api/ocr")({
     handlers: {
       POST: async ({ request }) => {
         const body = (await request.json()) as Body;
-        const key = process.env["LOVABLE_API_KEY"];
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        if (!hasAnyKey())
+          return new Response("Missing GEMINI_API_KEY / GROQ_API_KEY", { status: 500 });
         if (!body.imageDataUrl) return new Response("No image", { status: 400 });
 
-        const gateway = createLovableAiGatewayProvider(key);
-        const { text } = await generateText({
-          model: gateway("google/gemini-3.6-flash"),
+        const { text } = await generateWithFallback({
+          vision: true,
           system: `You read photos of school worksheets, textbook pages and handwritten notes.
 Transcribe the page, then list every question printed on it.
 Write mathematics as inline LaTeX inside single dollar signs, e.g. $\\sqrt{5}$,

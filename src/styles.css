@@ -278,18 +278,41 @@
   75% { content: "..."; }
 }
 
-/* sRGB fallbacks used only while capturing pages for the PDF export */
+/* sRGB fallbacks used only while capturing pages for the PDF export.
+   The snapshot library cannot read oklch(), so we hand it exact sRGB
+   equivalents of every notebook token — colours then match the screen. */
+.pdf-export,
+.pdf-export * {
+  --paper: #faf6e9;
+  --paper-edge: #eee8d6;
+  --paper-line: rgba(183, 210, 230, 0.55);
+  --paper-margin: rgba(234, 105, 110, 0.6);
+  --ink: #242b3b;
+  --ink-blue: #1d60bc;
+  --ink-red: #c92e3b;
+  --ink-green: #007840;
+  --ink-marker: #e14f00;
+  --color-paper: #faf6e9;
+  --color-paper-edge: #eee8d6;
+  --color-ink: #242b3b;
+  --color-ink-blue: #1d60bc;
+  --color-ink-red: #c92e3b;
+  --color-ink-green: #007840;
+  --color-ink-marker: #e14f00;
+}
+
 .pdf-export {
-  background-color: #fbf8ee !important;
+  background-color: #faf6e9 !important;
   background-image: repeating-linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0) 0,
     rgba(0, 0, 0, 0) calc(var(--rule) - 1px),
-    rgba(178, 205, 229, 0.55) calc(var(--rule) - 1px),
-    rgba(178, 205, 229, 0.55) var(--rule)
+    rgba(183, 210, 230, 0.55) calc(var(--rule) - 1px),
+    rgba(183, 210, 230, 0.55) var(--rule)
   ) !important;
   box-shadow: none !important;
 }
 .pdf-export.paper-margin::before {
-  background: rgba(226, 116, 96, 0.6) !important;
+  background: rgba(234, 105, 110, 0.6) !important;
 }
+

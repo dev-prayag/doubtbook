@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { streamText } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { hasAnyKey, streamWithFallback } from "@/lib/ai-providers.server";
 
 type Body = {
   mode?: "solve" | "notes" | "lasso";
@@ -52,8 +51,8 @@ export const Route = createFileRoute("/api/solve")({
     handlers: {
       POST: async ({ request }) => {
         const body = (await request.json()) as Body;
-        const key = process.env["LOVABLE_API_KEY"];
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        if (!hasAnyKey())
+          return new Response("Missing GEMINI_API_KEY / GROQ_API_KEY", { status: 500 });
 
         const mode = body.mode ?? "solve";
         let system = FORMAT;
@@ -108,14 +107,11 @@ final answer.`;
           parts.push({ type: "image", image: body.imageDataUrl });
         }
 
-        const gateway = createLovableAiGatewayProvider(key);
-        const result = streamText({
-          model: gateway("google/gemini-3.6-flash"),
+        return streamWithFallback({
           system,
           messages: [{ role: "user", content: parts as never }],
+          vision: !!body.imageDataUrl,
         });
-
-        return result.toTextStreamResponse();
       },
     },
   },

@@ -11,7 +11,7 @@ export async function capturePage(el: HTMLElement): Promise<string> {
 async function snapshot(el: HTMLElement): Promise<string> {
   const { default: html2canvas } = await import("html2canvas-pro");
   const canvas = await html2canvas(el, {
-    backgroundColor: "#fbf8ee",
+    backgroundColor: "#faf6e9",
     scale: 2,
     useCORS: true,
     logging: false,
