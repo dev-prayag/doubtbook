@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { streamText } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { hasAnyKey, streamWithFallback } from "@/lib/ai-providers.server";
 
 type Body = {
   mode?: "solve" | "notes" | "lasso";
