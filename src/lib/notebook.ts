@@ -57,19 +57,71 @@ export function newId() {
 
 export type Segment = { math: boolean; value: string };
 
+const MACRO =
+  /\\(?:[a-zA-Z]+)(?:\s*\{[^{}]*\}|\s*\[[^\]]*\]|\^\{?[^\s{}$]+\}?|_\{?[^\s{}$]+\}?)*/g;
+
+/** Rewrites any stray math the model emitted into plain inline $...$ spans. */
+function normalizeOutsideMath(chunk: string): string {
+  let s = chunk;
+  // sqrt(...) / x^2 style ASCII math -> LaTeX macros
+  s = s.replace(/\bsqrt\s*\(([^()]*)\)/gi, "\\sqrt{$1}");
+  s = s.replace(/([A-Za-z0-9)\]}])\^(-?\d+|\{[^{}]*\}|[A-Za-z])/g, (_m, base, exp) => {
+    const e = String(exp).replace(/^\{|\}$/g, "");
+    return `\\mathrm{${base}}^{${e}}`;
+  });
+  // wrap every remaining LaTeX macro run in dollars
+  s = s.replace(MACRO, (m) => `$${m.trim()}$`);
+  // merge dollars that ended up adjacent, e.g. "$\frac{1}{2}$$\sqrt{3}$"
+  s = s.replace(/\$\s*\$/g, " ");
+  return s;
+}
+
+/** Strips display-math delimiters so only inline $...$ ever reaches KaTeX. */
+export function normalizeMath(text: string): string {
+  let s = text
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_m, inner) => `$${String(inner).trim()}$`)
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_m, inner) => `$${String(inner).trim()}$`)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_m, inner) => `$${String(inner).trim()}$`)
+    .replace(/\\begin\{(?:align|equation|gather)\*?\}([\s\S]*?)\\end\{(?:align|equation|gather)\*?\}/g,
+      (_m, inner) => `$${String(inner).replace(/\\\\|&/g, " ").trim()}$`);
+
+  // walk the string, leaving existing $...$ spans untouched
+  let out = "";
+  let i = 0;
+  while (i < s.length) {
+    const open = s.indexOf("$", i);
+    if (open === -1) {
+      out += normalizeOutsideMath(s.slice(i));
+      break;
+    }
+    const close = s.indexOf("$", open + 1);
+    if (close === -1) {
+      out += normalizeOutsideMath(s.slice(i));
+      break;
+    }
+    out += normalizeOutsideMath(s.slice(i, open));
+    out += s.slice(open, close + 1);
+    i = close + 1;
+  }
+  s = out;
+  return s.replace(/\$\s*\$/g, " ").replace(/[ \t]{2,}/g, " ");
+}
+
 export function segments(text: string): Segment[] {
+  const src = normalizeMath(text);
   const out: Segment[] = [];
   const re = /\$([^$]+)\$/g;
   let last = 0;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) {
-    if (m.index > last) out.push({ math: false, value: text.slice(last, m.index) });
+  while ((m = re.exec(src))) {
+    if (m.index > last) out.push({ math: false, value: src.slice(last, m.index) });
     out.push({ math: true, value: m[1]!.trim() });
     last = m.index + m[0].length;
   }
-  if (last < text.length) out.push({ math: false, value: text.slice(last) });
-  return out.length ? out : [{ math: false, value: text }];
+  if (last < src.length) out.push({ math: false, value: src.slice(last) });
+  return out.length ? out : [{ math: false, value: src }];
 }
+
 
 /* ---------------- pagination ---------------- */
 
