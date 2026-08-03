@@ -31,6 +31,9 @@ function Landing() {
   const [image, setImage] = useState<string | undefined>();
   const [mode, setMode] = useState<"solve" | "notes">("solve");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const dictation = useDictation((text) =>
+    setQuestion((q) => (q.trim() ? `${q.trim()} ${text}` : text)),
+  );
 
   const start = () => {
     if (!question.trim() && !image) return;
