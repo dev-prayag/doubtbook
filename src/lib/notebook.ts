@@ -218,19 +218,47 @@ function tokenize(text: string): string[] {
   return tokens;
 }
 
+/**
+ * Approximate on-screen width of a token in "character" units.
+ * A `$...$` span is rendered by KaTeX at ~0.86em with all the LaTeX
+ * plumbing (\frac, braces, ^, _) invisible, so its raw source length
+ * hugely overestimates the space it takes — that was causing early
+ * line breaks and lots of empty space on the right.
+ */
+export function visualWidth(token: string): number {
+  if (!(token.startsWith("$") && token.endsWith("$") && token.length > 2)) return token.length;
+  let s = token.slice(1, -1);
+  s = s.replace(/\\(?:left|right|,|;|!|:|quad|qquad|displaystyle|limits)/g, "");
+  s = s.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_m, a, b) =>
+    String(a).length >= String(b).length ? String(a) : String(b),
+  );
+  s = s.replace(/\\sqrt\s*\{([^{}]*)\}/g, "v$1");
+  s = s.replace(/\\[a-zA-Z]+/g, "x"); // symbols/macros render as ~1 glyph
+  s = s.replace(/[{}^_&\\]/g, "");
+  return Math.max(1, Math.round(s.length * 0.86));
+}
+
 function wrap(text: string, max: number): string[] {
   const out: string[] = [];
   let cur = "";
+  let width = 0;
   for (const w of tokenize(text)) {
-    if (!cur.length) cur = w;
-    else if (cur.length + 1 + w.length <= max) cur += " " + w;
-    else {
+    const ww = visualWidth(w);
+    if (!cur.length) {
+      cur = w;
+      width = ww;
+    } else if (width + 1 + ww <= max) {
+      cur += " " + w;
+      width += 1 + ww;
+    } else {
       out.push(cur);
       cur = w;
+      width = ww;
     }
-    while (cur.length > max && !cur.startsWith("$")) {
+    while (width > max && !cur.startsWith("$")) {
       out.push(cur.slice(0, max));
       cur = cur.slice(max);
+      width = visualWidth(cur);
     }
   }
   if (cur.length) out.push(cur);
