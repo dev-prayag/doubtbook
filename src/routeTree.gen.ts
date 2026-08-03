@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiOcrRouteImport } from './routes/api/ocr'
 import { Route as ApiSolveRouteImport } from './routes/api/solve'
+import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as CChatIdRouteImport } from './routes/c.$chatId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const ApiSolveRoute = ApiSolveRouteImport.update({
   path: '/api/solve',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
+  id: '/api/transcribe',
+  path: '/api/transcribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CChatIdRoute = CChatIdRouteImport.update({
   id: '/c/$chatId',
   path: '/c/$chatId',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/solve': typeof ApiSolveRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/c/$chatId': typeof CChatIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/solve': typeof ApiSolveRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/c/$chatId': typeof CChatIdRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,28 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/api/ocr': typeof ApiOcrRoute
   '/api/solve': typeof ApiSolveRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/c/$chatId': typeof CChatIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/ocr' | '/api/solve' | '/c/$chatId'
+  fullPaths: '/' | '/api/ocr' | '/api/solve' | '/api/transcribe' | '/c/$chatId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/ocr' | '/api/solve' | '/c/$chatId'
-  id: '__root__' | '/' | '/api/ocr' | '/api/solve' | '/c/$chatId'
+  to: '/' | '/api/ocr' | '/api/solve' | '/api/transcribe' | '/c/$chatId'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/ocr'
+    | '/api/solve'
+    | '/api/transcribe'
+    | '/c/$chatId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiOcrRoute: typeof ApiOcrRoute
   ApiSolveRoute: typeof ApiSolveRoute
+  ApiTranscribeRoute: typeof ApiTranscribeRoute
   CChatIdRoute: typeof CChatIdRoute
 }
 
@@ -92,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSolveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/transcribe': {
+      id: '/api/transcribe'
+      path: '/api/transcribe'
+      fullPath: '/api/transcribe'
+      preLoaderRoute: typeof ApiTranscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/c/$chatId': {
       id: '/c/$chatId'
       path: '/c/$chatId'
@@ -106,6 +129,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiOcrRoute: ApiOcrRoute,
   ApiSolveRoute: ApiSolveRoute,
+  ApiTranscribeRoute: ApiTranscribeRoute,
   CChatIdRoute: CChatIdRoute,
 }
 export const routeTree = rootRouteImport

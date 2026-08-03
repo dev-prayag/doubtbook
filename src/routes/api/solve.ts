@@ -27,16 +27,21 @@ equation in single dollar signs, e.g. $\\sqrt{5}$, $\\frac{a+b}{2}$, $x^{2}$,
 $\\int_0^1 x\\,dx$, $\\theta = 30^\\circ$.
 NEVER write sqrt(...), x^2, a/b, +-, <=, or any plain-text math outside $...$.
 Never use $$ ... $$, \\[ \\], \\begin{align} or display math — inline $...$ only.
-Keep each $...$ span short so it fits one notebook line (under 40 characters);
-split long derivations across several "> " lines instead.
+Use the full width of the line: keep writing on the same line until it is
+genuinely full, and only then continue on the next one. Never break a line
+early, and never put a single short fragment on a line of its own.
+Split a derivation across lines only when it truly does not fit.
 
 DRAWINGS, GRAPHS AND TABLES — always real SVG, never ASCII art:
 Never draw with -, |, +, _ characters. Instead emit a figure block exactly:
-[draw rows=6]
-<svg viewBox="0 0 600 240" width="100%" height="100%">...</svg>
+[draw rows=10]
+<svg viewBox="0 0 900 400" width="100%" height="100%">...</svg>
 [/draw]
-rows = how many notebook lines tall the figure should be (3 to 12).
-Always use viewBox with width 600 and a height that matches rows*36.
+rows = how many notebook lines tall the figure should be (4 to 14). Be
+generous: tables, graphs and diagrams should be BIG and easy to read —
+use 8 to 14 rows for anything with several columns or data points.
+Use viewBox="0 0 900 H" where H = rows*40, and make the drawing fill it
+edge to edge (font-size 20-26 for table text and axis labels).
 Draw with real geometry: <line>, <rect>, <circle>, <path>, <polyline>, <text>.
 Use stroke="#2b4a8b" for construction lines, stroke="#b23a2f" for highlights,
 fill="none" where appropriate, and font-family="Patrick Hand, cursive"
@@ -44,7 +49,10 @@ font-size="16" fill="#2f3542" for labels. For tables draw the grid with
 <line> rules and place cell text with <text>. Use figures generously for
 tables, graphs, number lines, geometry, circuits and flow charts.
 
-Keep every text line SHORT (under 52 characters).`;
+You have full freedom in how you lay out figures and drawings — draw whatever
+serves the explanation best (graphs, number lines, geometry, circuits, flow
+charts, big tables). Do not compromise on figure size or detail.
+Write in full, complete lines rather than many short broken ones.`;
 
 export const Route = createFileRoute("/api/solve")({
   server: {

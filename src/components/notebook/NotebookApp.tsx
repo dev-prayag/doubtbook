@@ -6,10 +6,13 @@ import {
   ChevronRight,
   Download,
   ImagePlus,
+  Loader2,
   Menu,
+  Mic,
   Pencil,
   Plus,
   Send,
+  Square,
   Trash2,
 } from "lucide-react";
 import { NotebookPage } from "./NotebookPage";
@@ -27,6 +30,7 @@ import {
   type Entry,
 } from "@/lib/notebook";
 import { buildPdf, capturePage, nextFrame } from "@/lib/pdf";
+import { useDictation } from "@/hooks/use-dictation";
 
 function persist(chat: Chat) {
   try {
@@ -57,6 +61,9 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   const [ocrEntryId, setOcrEntryId] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const dictation = useDictation((text) =>
+    setInput((q) => (q.trim() ? `${q.trim()} ${text}` : text)),
+  );
 
   const pageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -84,15 +91,16 @@ export function NotebookApp({ chatId }: { chatId: string }) {
       probe.className = "hand-line";
       probe.style.position = "absolute";
       probe.style.visibility = "hidden";
-      probe.textContent = "n".repeat(60);
+      const sample = "the value of x is 24 and area equals 36 sq cm, so ";
+      probe.textContent = sample.repeat(2);
       el.appendChild(probe);
       const box = probe.getBoundingClientRect();
-      const charWidth = box.width / 60 || 10;
+      const charWidth = box.width / (sample.length * 2) || 10;
       const rule = box.height || 28;
       probe.remove();
-      const width = el.clientWidth - 64;
+      const width = el.clientWidth - 78;
       setDims({
-        charsPerLine: Math.max(18, Math.floor(width / charWidth)),
+        charsPerLine: Math.max(18, Math.floor((width / charWidth) * 0.94)),
         linesPerPage: Math.max(6, Math.floor((el.clientHeight - 8) / rule)),
       });
     };
@@ -432,7 +440,12 @@ export function NotebookApp({ chatId }: { chatId: string }) {
       {/* desk strip: menu, pen, page flip, ask box */}
       <div className="shrink-0 px-2 pb-3 sm:px-6">
         <div className="mx-auto w-full max-w-3xl space-y-2">
-          {error && <p className="text-center text-xs text-ink-red/90">{error}</p>}
+          {(error || dictation.error) && (
+            <p className="text-center text-xs text-ink-red/90">{error ?? dictation.error}</p>
+          )}
+          {dictation.recording && (
+            <p className="text-center text-xs text-paper/70">Listening… tap the mic to stop.</p>
+          )}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMenuOpen(true)}
@@ -524,6 +537,23 @@ export function NotebookApp({ chatId }: { chatId: string }) {
               placeholder={mode === "notes" ? "Topic for notes…" : "Ask your next doubt…"}
               className="max-h-24 min-h-9 flex-1 resize-none bg-transparent py-1.5 font-[family-name:var(--font-hand)] text-lg text-paper outline-none placeholder:text-paper/40"
             />
+            <button
+              onClick={dictation.toggle}
+              disabled={dictation.transcribing}
+              className={`grid size-9 shrink-0 place-items-center rounded-lg ${
+                dictation.recording ? "bg-ink-red text-paper" : "text-paper/80 hover:bg-paper/10"
+              }`}
+              aria-label={dictation.recording ? "Stop recording" : "Speak your doubt"}
+              title="Speak your doubt"
+            >
+              {dictation.transcribing ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : dictation.recording ? (
+                <Square className="size-4" />
+              ) : (
+                <Mic className="size-5" />
+              )}
+            </button>
             <button
               onClick={ask}
               disabled={busy}

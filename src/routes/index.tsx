@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ImagePlus, Send, Sparkles } from "lucide-react";
+import { ImagePlus, Loader2, Mic, Send, Sparkles, Square } from "lucide-react";
+import { useDictation } from "@/hooks/use-dictation";
 import { newId, saveChat, type Chat, type Entry } from "@/lib/notebook";
 
 export const Route = createFileRoute("/")({
@@ -30,6 +31,9 @@ function Landing() {
   const [image, setImage] = useState<string | undefined>();
   const [mode, setMode] = useState<"solve" | "notes">("solve");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const dictation = useDictation((text) =>
+    setQuestion((q) => (q.trim() ? `${q.trim()} ${text}` : text)),
+  );
 
   const start = () => {
     if (!question.trim() && !image) return;
@@ -122,12 +126,34 @@ function Landing() {
             )}
             <div className="flex-1" />
             <button
+              onClick={dictation.toggle}
+              disabled={dictation.transcribing}
+              className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${
+                dictation.recording
+                  ? "bg-ink-red text-paper"
+                  : "bg-paper/10 text-paper/85 hover:bg-paper/20"
+              }`}
+              aria-label={dictation.recording ? "Stop recording" : "Speak your doubt"}
+            >
+              {dictation.transcribing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : dictation.recording ? (
+                <Square className="size-4" />
+              ) : (
+                <Mic className="size-4" />
+              )}
+              {dictation.transcribing ? "Writing…" : dictation.recording ? "Stop" : "Speak"}
+            </button>
+            <button
               onClick={start}
               className="inline-flex items-center gap-2 rounded-xl bg-paper px-4 py-2 text-sm font-semibold text-desk-2"
             >
               Open notebook <Send className="size-4" />
             </button>
           </div>
+          {dictation.error && (
+            <p className="mt-2 text-xs text-ink-red/90">{dictation.error}</p>
+          )}
         </div>
       </div>
     </main>
