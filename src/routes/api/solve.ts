@@ -34,8 +34,8 @@ Split a derivation across lines only when it truly does not fit.
 
 DRAWINGS, GRAPHS AND TABLES — always real SVG, never ASCII art:
 Never draw with -, |, +, _ characters. Instead emit a figure block exactly:
-[draw rows=6]
-<svg viewBox="0 0 600 240" width="100%" height="100%">...</svg>
+[draw rows=10]
+<svg viewBox="0 0 900 400" width="100%" height="100%">...</svg>
 [/draw]
 rows = how many notebook lines tall the figure should be (4 to 14). Be
 generous: tables, graphs and diagrams should be BIG and easy to read —

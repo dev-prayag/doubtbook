@@ -183,7 +183,7 @@ function toBlocks(answer: string): Block[] {
     const line = lines[i]!;
     const open = /^\s*\[draw(?:\s+rows\s*=\s*(\d+))?\]\s*$/.exec(line);
     if (open) {
-      const rows = Math.min(14, Math.max(3, Number(open[1] ?? 6) || 6));
+      const rows = Math.min(16, Math.max(4, Number(open[1] ?? 8) || 8));
       const buf: string[] = [];
       i += 1;
       let closed = false;
