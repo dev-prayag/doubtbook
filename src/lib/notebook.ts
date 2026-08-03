@@ -332,3 +332,56 @@ export function paginate(
 
   return { pages, totalChars: offset };
 }
+
+/* ---------------- math inside SVG figures ---------------- */
+
+const SUP: Record<string, string> = {
+  "0": "\u2070", "1": "\u00b9", "2": "\u00b2", "3": "\u00b3", "4": "\u2074",
+  "5": "\u2075", "6": "\u2076", "7": "\u2077", "8": "\u2078", "9": "\u2079",
+  "+": "\u207a", "-": "\u207b", "(": "\u207d", ")": "\u207e", n: "\u207f", i: "\u2071",
+};
+const SUB: Record<string, string> = {
+  "0": "\u2080", "1": "\u2081", "2": "\u2082", "3": "\u2083", "4": "\u2084",
+  "5": "\u2085", "6": "\u2086", "7": "\u2087", "8": "\u2088", "9": "\u2089",
+  "+": "\u208a", "-": "\u208b", "(": "\u208d", ")": "\u208e",
+  a: "\u2090", e: "\u2091", n: "\u2099", x: "\u2093",
+};
+const SYMBOLS: Record<string, string> = {
+  alpha: "\u03b1", beta: "\u03b2", gamma: "\u03b3", delta: "\u03b4", Delta: "\u0394",
+  theta: "\u03b8", lambda: "\u03bb", mu: "\u03bc", pi: "\u03c0", rho: "\u03c1",
+  sigma: "\u03c3", tau: "\u03c4", phi: "\u03c6", omega: "\u03c9", Omega: "\u03a9",
+  times: "\u00d7", cdot: "\u00b7", div: "\u00f7", pm: "\u00b1", mp: "\u2213",
+  leq: "\u2264", geq: "\u2265", neq: "\u2260", approx: "\u2248", infty: "\u221e",
+  rightarrow: "\u2192", to: "\u2192", leftarrow: "\u2190", leftrightarrow: "\u2194",
+  Rightarrow: "\u21d2", degree: "\u00b0", circ: "\u00b0", sum: "\u2211", int: "\u222b",
+  partial: "\u2202", propto: "\u221d", ldots: "\u2026", dots: "\u2026", prime: "\u2032",
+};
+
+function script(body: string, map: Record<string, string>): string {
+  const chars = [...body];
+  if (chars.every((c) => map[c])) return chars.map((c) => map[c]!).join("");
+  return (map === SUP ? "^" : "_") + body;
+}
+
+/**
+ * Converts LaTeX to readable Unicode math for contexts that cannot run KaTeX
+ * (SVG <text> labels inside drawn tables, graphs and diagrams).
+ */
+export function mathToUnicode(input: string): string {
+  let s = input;
+  s = s.replace(/\$+/g, "");
+  s = s.replace(/\\(?:left|right|displaystyle|limits|!|,|;|:)/g, "");
+  s = s.replace(/\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}/g, "$1");
+  for (let pass = 0; pass < 3; pass += 1) {
+    s = s.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, "($1)/($2)");
+    s = s.replace(/\\sqrt\s*\{([^{}]*)\}/g, "\u221a($1)");
+  }
+  s = s.replace(/\\([a-zA-Z]+)/g, (m, name: string) => SYMBOLS[name] ?? name);
+  s = s.replace(/\^\{([^{}]*)\}/g, (_m, b: string) => script(b, SUP));
+  s = s.replace(/\^(-?\w)/g, (_m, b: string) => script(b, SUP));
+  s = s.replace(/_\{([^{}]*)\}/g, (_m, b: string) => script(b, SUB));
+  s = s.replace(/_(-?\w)/g, (_m, b: string) => script(b, SUB));
+  s = s.replace(/[{}]/g, "");
+  s = s.replace(/\(\(([^()]*)\)\)/g, "($1)");
+  return s.replace(/[ \t]{2,}/g, " ").trim();
+}
