@@ -1,6 +1,6 @@
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { segments } from "@/lib/notebook";
+import { mathToUnicode, segments } from "@/lib/notebook";
 
 function html(tex: string) {
   try {
@@ -55,7 +55,14 @@ export function InkFigure({
   const clean = svg
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, "");
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
+    // KaTeX cannot run inside SVG, so render label maths as Unicode instead
+    .replace(/(<(?:text|tspan)\b[^>]*>)([\s\S]*?)(<\/(?:text|tspan)>)/gi, (_m, open, body, close) =>
+      /<[a-z]/i.test(String(body))
+        ? `${open}${body}${close}`
+        : `${open}${mathToUnicode(String(body))}${close}`,
+    );
+
   return (
     <div
       className="ink-figure"
