@@ -307,7 +307,10 @@ export function paginate(
       }
       const isQ = block.kind === "q";
       if (isQ) qCount += 1;
-      const indent = isQ ? 4 : block.kind === "diagram" ? 0 : 2;
+      // bold ink (question/heading/important/final) renders wider per glyph,
+      // so reserve a little more room for those blocks
+      const bold = isQ || ["h", "important", "final"].includes(block.kind);
+      const indent = isQ ? 6 : bold ? 5 : block.kind === "diagram" ? 0 : 2;
       const visual =
         block.kind === "blank"
           ? [""]
