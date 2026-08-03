@@ -145,9 +145,15 @@ function Landing() {
               {dictation.transcribing ? "Writing…" : dictation.recording ? "Stop" : "Speak"}
             </button>
             <button
+              onClick={start}
+              className="inline-flex items-center gap-2 rounded-xl bg-paper px-4 py-2 text-sm font-semibold text-desk-2"
+            >
               Open notebook <Send className="size-4" />
             </button>
           </div>
+          {dictation.error && (
+            <p className="mt-2 text-xs text-ink-red/90">{dictation.error}</p>
+          )}
         </div>
       </div>
     </main>
