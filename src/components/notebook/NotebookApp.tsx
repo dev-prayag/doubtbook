@@ -100,7 +100,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
       probe.remove();
       const width = el.clientWidth - 78;
       setDims({
-        charsPerLine: Math.max(18, Math.floor(width / charWidth)),
+        charsPerLine: Math.max(18, Math.floor((width / charWidth) * 0.94)),
         linesPerPage: Math.max(6, Math.floor((el.clientHeight - 8) / rule)),
       });
     };
