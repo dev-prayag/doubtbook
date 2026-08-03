@@ -383,5 +383,6 @@ export function mathToUnicode(input: string): string {
   s = s.replace(/_(-?\w)/g, (_m, b: string) => script(b, SUB));
   s = s.replace(/[{}]/g, "");
   s = s.replace(/\(\(([^()]*)\)\)/g, "($1)");
+  s = s.replace(/\(([\w.]+)\)\//g, "$1/").replace(/\/\(([\w.]+)\)/g, "/$1");
   return s.replace(/[ \t]{2,}/g, " ").trim();
 }
