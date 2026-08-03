@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ImagePlus, Send, Sparkles } from "lucide-react";
+import { ImagePlus, Loader2, Mic, Send, Sparkles, Square } from "lucide-react";
+import { useDictation } from "@/hooks/use-dictation";
 import { newId, saveChat, type Chat, type Entry } from "@/lib/notebook";
 
 export const Route = createFileRoute("/")({
