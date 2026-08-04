@@ -162,8 +162,9 @@
 }
 
 @theme inline {
-  --font-hand: "Caveat", "Patrick Hand", cursive;
-  --font-hand-alt: "Patrick Hand", cursive;
+  --font-hand: "Kalam", "Patrick Hand", cursive;
+  --font-hand-alt: "Patrick Hand", "Kalam", cursive;
+
   --color-paper: var(--paper);
   --color-paper-edge: var(--paper-edge);
   --color-desk: var(--desk);
@@ -207,11 +208,13 @@
   height: var(--rule);
   line-height: var(--rule);
   font-family: var(--font-hand);
-  font-size: 1.18rem;
+  font-size: 1.06rem;
+  letter-spacing: 0.002em;
   white-space: pre;
   overflow: hidden;
   text-overflow: clip;
 }
+
 
 .glass {
   background: color-mix(in oklab, var(--paper) 12%, transparent);
@@ -239,17 +242,29 @@
 /* inline LaTeX inside handwriting lines */
 .ink-math {
   display: inline-block;
-  vertical-align: -0.05em;
-  font-size: 0.95em;
+  vertical-align: baseline;
+  font-size: 0.98em;
   line-height: 1;
+  margin: 0 0.05em;
 }
 .hand-line .ink-math {
-  vertical-align: -0.16em;
-  font-size: 0.86em;
+  vertical-align: -0.02em;
+  font-size: 1em;
 }
+
 .ink-math .katex {
   font-size: 1em;
   color: inherit;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.ink-math .katex .mord,
+.ink-math .katex .mbin,
+.ink-math .katex .mrel {
+  font-family: inherit;
+}
+.ink-math .katex .frac-line {
+  border-bottom-width: 0.055em;
 }
 
 /* AI-drawn figures: tables, graphs, geometry */
@@ -265,6 +280,13 @@
   height: 100%;
   max-width: 100%;
 }
+.ink-figure svg text,
+.ink-figure svg tspan {
+  font-family: var(--font-hand);
+  letter-spacing: 0.01em;
+  paint-order: stroke;
+}
+
 
 /* "Generating…" ellipsis */
 .gen-dots::after {

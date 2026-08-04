@@ -42,6 +42,26 @@ export function InkText({ text, shown = Infinity }: { text: string; shown?: numb
   return <>{out}</>;
 }
 
+/** LaTeX -> Unicode inside every label-bearing SVG node (nested tspans included). */
+function convertSvgLabels(src: string): string {
+  const LABEL_TAGS = "text|tspan|title|desc|textPath";
+  let s = src;
+  // innermost-first: bodies without nested tags get converted, repeat for nesting
+  for (let pass = 0; pass < 4; pass += 1) {
+    s = s.replace(
+      new RegExp(`(<(${LABEL_TAGS})\\b[^>]*>)([^<]*)(</\\2>)`, "gi"),
+      (_m, open: string, _tag: string, body: string, close: string) =>
+        body.trim() ? `${open}${mathToUnicode(body)}${close}` : `${open}${body}${close}`,
+    );
+  }
+  // labels passed as attributes (aria-label, data-label, alt)
+  s = s.replace(
+    /\b(aria-label|data-label|alt)\s*=\s*"([^"]*)"/gi,
+    (_m, name: string, value: string) => `${name}="${mathToUnicode(value)}"`,
+  );
+  return s;
+}
+
 /** Sanitised inline SVG figure (tables, graphs, drawings drawn by the AI). */
 export function InkFigure({
   svg,
@@ -52,16 +72,12 @@ export function InkFigure({
   rows: number;
   visible: boolean;
 }) {
-  const clean = svg
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
-    // KaTeX cannot run inside SVG, so render label maths as Unicode instead
-    .replace(/(<(?:text|tspan)\b[^>]*>)([\s\S]*?)(<\/(?:text|tspan)>)/gi, (_m, open, body, close) =>
-      /<[a-z]/i.test(String(body))
-        ? `${open}${body}${close}`
-        : `${open}${mathToUnicode(String(body))}${close}`,
-    );
+  const clean = convertSvgLabels(
+    svg
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
+      .replace(/\son\w+\s*=\s*'[^']*'/gi, ""),
+  );
 
   return (
     <div
@@ -75,3 +91,4 @@ export function InkFigure({
     />
   );
 }
+

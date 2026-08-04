@@ -44,10 +44,21 @@ Use viewBox="0 0 900 H" where H = rows*40, and make the drawing fill it
 edge to edge (font-size 20-26 for table text and axis labels).
 Draw with real geometry: <line>, <rect>, <circle>, <path>, <polyline>, <text>.
 Use stroke="#2b4a8b" for construction lines, stroke="#b23a2f" for highlights,
-fill="none" where appropriate, and font-family="Patrick Hand, cursive"
-font-size="16" fill="#2f3542" for labels. For tables draw the grid with
+fill="none" where appropriate, and font-size="22" fill="#2f3542" for labels
+(the notebook applies its own handwriting font, do not set font-family).
+LABEL MATH: inside <text>/<tspan>/<title> labels, axis ticks and captions you may
+write LaTeX ($\\frac{a}{b}$, $x^{2}$, $\\sqrt{5}$) — it is converted to real math
+glyphs automatically, so never write sqrt() or a^2 in a label.
+Keep labels short (max ~18 characters); if a label is longer, split it into
+stacked <tspan x="..." dy="1.1em"> lines instead of letting it overflow.
+Give cells breathing room: at least 34px row height, 12px text padding from
+grid lines, use text-anchor="middle" for centred cells and "start" with an
+x offset for left-aligned ones, and align a column's numbers on the same x.
+Never let two labels overlap and never leave large empty bands in the figure.
+For tables draw the grid with
 <line> rules and place cell text with <text>. Use figures generously for
 tables, graphs, number lines, geometry, circuits and flow charts.
+
 
 You have full freedom in how you lay out figures and drawings — draw whatever
 serves the explanation best (graphs, number lines, geometry, circuits, flow
