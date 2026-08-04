@@ -162,8 +162,9 @@
 }
 
 @theme inline {
-  --font-hand: "Caveat", "Patrick Hand", cursive;
-  --font-hand-alt: "Patrick Hand", cursive;
+  --font-hand: "Kalam", "Patrick Hand", cursive;
+  --font-hand-alt: "Patrick Hand", "Kalam", cursive;
+
   --color-paper: var(--paper);
   --color-paper-edge: var(--paper-edge);
   --color-desk: var(--desk);
