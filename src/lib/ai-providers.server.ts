@@ -41,8 +41,24 @@ function groq(vision: boolean): Candidate | null {
   };
 }
 
+function huggingface(vision: boolean): Candidate | null {
+  const key = process.env["HUGGINGFACE_API_KEY"];
+  if (!key) return null;
+  const provider = createOpenAICompatible({
+    name: "huggingface",
+    baseURL: "https://router.huggingface.co/v1",
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  return {
+    label: "huggingface",
+    model: provider(
+      vision ? "Qwen/Qwen2.5-VL-7B-Instruct" : "meta-llama/Llama-3.3-70B-Instruct",
+    ),
+  };
+}
+
 function candidates(vision: boolean): Candidate[] {
-  return [gemini(vision), groq(vision)].filter(Boolean) as Candidate[];
+  return [gemini(vision), groq(vision), huggingface(vision)].filter(Boolean) as Candidate[];
 }
 
 export function hasAnyKey() {
