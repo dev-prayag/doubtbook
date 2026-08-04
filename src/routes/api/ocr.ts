@@ -61,7 +61,7 @@ QUESTIONS:
         const questions = rawQs
           .split("\n")
           .map((l) => l.replace(/^\s*\d+[.)]\s*/, "").trim())
-          .filter((l) => l.length > 1);
+          .filter((l) => l.length > 1 && !/^\[figure\]/i.test(l));
 
         return Response.json({ raw: rawText.trim(), questions });
       },
