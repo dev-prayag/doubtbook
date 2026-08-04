@@ -384,5 +384,9 @@ export function mathToUnicode(input: string): string {
   s = s.replace(/[{}]/g, "");
   s = s.replace(/\(\(([^()]*)\)\)/g, "($1)");
   s = s.replace(/\(([\w.]+)\)\//g, "$1/").replace(/\/\(([\w.]+)\)/g, "/$1");
+  // even spacing around relations / binary operators, no doubled blanks
+  s = s.replace(/\s*(=|≠|≈|≤|≥|→|←|↔|⇒|±|∓|×|÷)\s*/g, " $1 ");
+  s = s.replace(/\s+([,;:)\]])/g, "$1").replace(/([([])\s+/g, "$1");
   return s.replace(/[ \t]{2,}/g, " ").trim();
+
 }
