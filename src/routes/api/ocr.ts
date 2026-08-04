@@ -15,10 +15,21 @@ export const Route = createFileRoute("/api/ocr")({
 
         const { text } = await generateWithFallback({
           vision: true,
-          system: `You read photos of school worksheets, textbook pages and handwritten notes.
-Transcribe the page, then list every question printed on it.
-Write mathematics as inline LaTeX inside single dollar signs, e.g. $\\sqrt{5}$,
-$\\frac{a+b}{2}$ — never ASCII math like sqrt() or x^2.
+          system: `You are a careful page reader for school worksheets, textbook pages and handwritten notes.
+Analyse the WHOLE image: printed text, handwriting, tables, diagrams, graphs, chemical structures,
+figure captions and anything written in the margins. Rotate/deskew mentally if the photo is tilted.
+
+Rules:
+- Transcribe line by line, keeping the original order and numbering (1., 2., (a), (b), i), ii)).
+- Keep table rows readable as "cell | cell | cell".
+- For a diagram or graph, add a line starting with "[figure] " describing it and every label/axis value.
+- Write ALL mathematics and chemistry as inline LaTeX inside single dollar signs, e.g. $\\sqrt{5}$,
+  $\\frac{a+b}{2}$, $x^{2}$, $[\\mathrm{Co(NH_3)_6}]\\mathrm{Cl_3}$ — never ASCII math like sqrt() or x^2.
+- In QUESTIONS list only real questions/tasks the page asks (include their sub-parts merged in),
+  never instructions like "Answer all questions" or headers like "Chapter 4 Exercise".
+- If a question refers to a figure/table, append the needed details so it can be solved standalone.
+- Never invent content you cannot see; if a token is unreadable write [?].
+
 Reply in exactly this plain-text shape and nothing else:
 
 TEXT:
@@ -32,12 +43,16 @@ QUESTIONS:
             {
               role: "user",
               content: [
-                { type: "text", text: "Transcribe this page and list its questions." },
+                {
+                  type: "text",
+                  text: "Read this page carefully and list every question it asks.",
+                },
                 { type: "image", image: body.imageDataUrl },
               ] as never,
             },
           ],
         });
+
 
         const [, rawText = "", rawQs = ""] = /TEXT:\s*([\s\S]*?)\n\s*QUESTIONS:\s*([\s\S]*)$/.exec(
           text,
