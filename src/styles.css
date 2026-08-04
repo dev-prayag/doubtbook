@@ -208,11 +208,13 @@
   height: var(--rule);
   line-height: var(--rule);
   font-family: var(--font-hand);
-  font-size: 1.18rem;
+  font-size: 1.06rem;
+  letter-spacing: 0.002em;
   white-space: pre;
   overflow: hidden;
   text-overflow: clip;
 }
+
 
 .glass {
   background: color-mix(in oklab, var(--paper) 12%, transparent);
