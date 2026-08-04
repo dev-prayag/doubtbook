@@ -248,9 +248,10 @@
   margin: 0 0.05em;
 }
 .hand-line .ink-math {
-  vertical-align: -0.04em;
-  font-size: 0.94em;
+  vertical-align: -0.02em;
+  font-size: 1em;
 }
+
 .ink-math .katex {
   font-size: 1em;
   color: inherit;
