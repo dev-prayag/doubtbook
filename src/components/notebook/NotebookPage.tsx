@@ -10,6 +10,7 @@ const kindClass: Record<string, string> = {
   final: "text-ink-red font-semibold underline decoration-2 decoration-ink-red/60",
   diagram: "text-ink font-[family-name:var(--font-hand-alt)] text-[0.95rem]",
   p: "text-ink-blue",
+  quote: "text-ink-blue/80 italic hand-quote",
   gen: "text-ink/45 italic",
   blank: "",
 };

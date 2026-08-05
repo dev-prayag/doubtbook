@@ -57,8 +57,15 @@ function huggingface(vision: boolean): Candidate | null {
   };
 }
 
+/**
+ * Gemini leads for anything with a photo (it reads pages far better);
+ * Groq leads for plain text solving/notes (fast), with Gemini right behind.
+ */
 function candidates(vision: boolean): Candidate[] {
-  return [gemini(vision), groq(vision), huggingface(vision)].filter(Boolean) as Candidate[];
+  const list = vision
+    ? [gemini(vision), groq(vision), huggingface(vision)]
+    : [groq(vision), gemini(vision), huggingface(vision)];
+  return list.filter(Boolean) as Candidate[];
 }
 
 export function hasAnyKey() {
