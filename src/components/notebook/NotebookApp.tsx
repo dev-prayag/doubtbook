@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
+  Camera,
+  Image as ImageIcon,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -43,7 +45,12 @@ function persist(chat: Chat) {
 export function NotebookApp({ chatId }: { chatId: string }) {
   const navigate = useNavigate();
   const [chat, setChat] = useState<Chat | null>(null);
-  const [dims, setDims] = useState({ charsPerLine: 44, linesPerPage: 14 });
+  const [dims, setDims] = useState({
+    charsPerLine: 44,
+    linesPerPage: 14,
+    pageWidth: 640,
+    rule: 28,
+  });
   const [pageIndex, setPageIndex] = useState(0);
   const [reveal, setReveal] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -56,6 +63,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   const [doubtBusy, setDoubtBusy] = useState(false);
   const [doubtError, setDoubtError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [photoMenu, setPhotoMenu] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ocrEntryId, setOcrEntryId] = useState<string | null>(null);
@@ -65,6 +73,8 @@ export function NotebookApp({ chatId }: { chatId: string }) {
     setInput((q) => (q.trim() ? `${q.trim()} ${text}` : text)),
   );
 
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const animating = useRef(false);
@@ -102,6 +112,8 @@ export function NotebookApp({ chatId }: { chatId: string }) {
       setDims({
         charsPerLine: Math.max(18, Math.floor((width / charWidth) * 0.94)),
         linesPerPage: Math.max(6, Math.floor((el.clientHeight - 8) / rule)),
+        pageWidth: Math.max(200, width),
+        rule,
       });
     };
 
@@ -393,10 +405,36 @@ export function NotebookApp({ chatId }: { chatId: string }) {
     }
   };
 
+  /** Normalise a photo before OCR: cap the size and lift contrast a little,
+   *  which makes camera shots of worksheets read far more reliably. */
   const onFile = (file: File | undefined) => {
     if (!file) return;
+    setPhotoMenu(false);
     const reader = new FileReader();
-    reader.onload = () => setImage(String(reader.result));
+    reader.onload = () => {
+      const src = String(reader.result);
+      const img = new Image();
+      img.onload = () => {
+        const max = 1800;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return setImage(src);
+        ctx.filter = "contrast(1.16) saturate(0.9) brightness(1.05)";
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          setImage(canvas.toDataURL("image/jpeg", 0.92));
+        } catch {
+          setImage(src);
+        }
+      };
+      img.onerror = () => setImage(src);
+      img.src = src;
+    };
     reader.readAsDataURL(file);
   };
 
@@ -507,15 +545,49 @@ export function NotebookApp({ chatId }: { chatId: string }) {
           </div>
 
           <div className="glass flex items-end gap-2 rounded-2xl p-2">
-            <label className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-paper/80 hover:bg-paper/10">
-              <ImagePlus className="size-5" />
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setPhotoMenu((v) => !v)}
+                className="grid size-9 place-items-center rounded-lg text-paper/80 hover:bg-paper/10"
+                aria-label="Add a photo"
+              >
+                <ImagePlus className="size-5" />
+              </button>
+              {photoMenu && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setPhotoMenu(false)} />
+                  <div className="glass absolute bottom-11 left-0 z-40 w-44 overflow-hidden rounded-xl text-sm text-paper">
+                    <button
+                      onClick={() => cameraRef.current?.click()}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 hover:bg-paper/10"
+                    >
+                      <Camera className="size-4" /> Take a photo
+                    </button>
+                    <button
+                      onClick={() => galleryRef.current?.click()}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 hover:bg-paper/10"
+                    >
+                      <ImageIcon className="size-4" /> Choose from photos
+                    </button>
+                  </div>
+                </>
+              )}
               <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => onFile(e.target.files?.[0])}
+              />
+              <input
+                ref={galleryRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={(e) => onFile(e.target.files?.[0])}
               />
-            </label>
+            </div>
             {image && (
               <img
                 src={image}
