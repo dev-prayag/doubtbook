@@ -23,6 +23,17 @@ export function LassoLayer({
     return [e.clientX - box.left, e.clientY - box.top] as [number, number];
   };
 
+  /** even-odd point-in-polygon test on the drawn lasso path */
+  const inside = (pts: Array<[number, number]>, x: number, y: number) => {
+    let hit = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i]!;
+      const [xj, yj] = pts[j]!;
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+    }
+    return hit;
+  };
+
   const finish = () => {
     drawing.current = false;
     const pts = points;
@@ -40,11 +51,29 @@ export function LassoLayer({
     const lines = Array.from(
       ref.current!.parentElement?.querySelectorAll<HTMLElement>("[data-line]") ?? [],
     );
+    const tiny = rect.width < 24 && rect.height < 24; // a tap, not a loop
     const picked = lines.filter((el) => {
+      if (!el.innerText.trim()) return false;
       const r = el.getBoundingClientRect();
       const top = r.top - box.top;
-      const bottom = r.bottom - box.top;
-      return bottom > rect.top + 4 && top < rect.top + rect.height - 4 && el.innerText.trim();
+      const height = r.height;
+      const left = r.left - box.left;
+      const width = r.width;
+      const mid = top + height / 2;
+      if (tiny) return mid > rect.top - height && mid < rect.top + rect.height + height;
+      // sample points across the line's own row: a line counts as selected when
+      // a real part of it falls inside the drawn loop
+      let hits = 0;
+      const samples = 9;
+      for (let i = 0; i < samples; i += 1) {
+        const x = left + (width * (i + 0.5)) / samples;
+        if (inside(pts, x, mid) || inside(pts, x, top + height * 0.3)) hits += 1;
+      }
+      if (hits >= 2) return true;
+      // fall back to vertical band overlap for quick sloppy scribbles
+      const overlap =
+        Math.min(top + height, rect.top + rect.height) - Math.max(top, rect.top);
+      return overlap > height * 0.5;
     });
     const text = picked
       .map((el) => el.innerText.trim())

@@ -206,7 +206,9 @@
 
 .hand-line {
   height: var(--rule);
-  line-height: var(--rule);
+  /* a taller line box drops the ink a few px so it rests ON the rule
+     instead of touching the line above it */
+  line-height: calc(var(--rule) + 8px);
   font-family: var(--font-hand);
   font-size: 1.06rem;
   letter-spacing: 0.002em;
@@ -214,6 +216,27 @@
   overflow: hidden;
   text-overflow: clip;
 }
+
+/* markdown-ish inline ink */
+.ink-b {
+  font-weight: 700;
+}
+.ink-i {
+  font-style: italic;
+}
+.ink-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  padding: 0 0.18em;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
+}
+.hand-quote {
+  border-left: 3px solid color-mix(in oklab, var(--ink-blue) 55%, transparent);
+  padding-left: 0.5rem;
+  opacity: 0.92;
+}
+
 
 
 .glass {
