@@ -135,6 +135,7 @@ export type LineKind =
   | "p"
   | "blank"
   | "draw"
+  | "quote"
   | "gen";
 
 export type Line = {
@@ -161,8 +162,18 @@ type Block = { kind: LineKind; text: string; svg?: string; rows?: number };
 function parseKind(raw: string): Block {
   const t = raw.trimEnd();
   if (!t.trim()) return { kind: "blank", text: "" };
+  const body = t.trim();
+
+  // markdown that models emit anyway: ## heading, > quote, - bullet, 1. item
+  const heading = /^(#{1,6})\s+(.*)$/.exec(body);
+  if (heading) return { kind: "h", text: heading[2]!.trim() };
+  const quote = /^>{2,}\s*(.*)$/.exec(body);
+  if (quote) return { kind: "quote", text: quote[1]!.trim() };
+  const bullet = /^[-*+\u2022]\s+(.*)$/.exec(body);
+  if (bullet) return { kind: "step", text: bullet[1]!.trim() };
+
   const m = /^([#>!=~?])\s+(.*)$/.exec(t);
-  if (!m) return { kind: "p", text: t.trim() };
+  if (!m) return { kind: "p", text: body };
   const map: Record<string, LineKind> = {
     "?": "q",
     "#": "h",
@@ -172,6 +183,18 @@ function parseKind(raw: string): Block {
     "~": "diagram",
   };
   return { kind: map[m[1]!]!, text: m[2]!.trim() };
+}
+
+/** Rows a figure needs so it fills the page width with no letterboxing. */
+function figureRows(svg: string, opts: { pageWidth: number; rule: number; max: number }): number {
+  const vb = /viewBox\s*=\s*"([^"]+)"/i.exec(svg);
+  if (!vb) return Math.min(opts.max, 10);
+  const nums = vb[1]!.trim().split(/[\s,]+/).map(Number);
+  const w = nums[2] ?? 0;
+  const h = nums[3] ?? 0;
+  if (!w || !h) return Math.min(opts.max, 10);
+  const px = (h / w) * opts.pageWidth;
+  return Math.max(4, Math.min(opts.max, Math.ceil(px / opts.rule) + 1));
 }
 
 /** Split answer text into blocks, pulling out [draw]...[/draw] SVG figures. */
@@ -267,9 +290,11 @@ function wrap(text: string, max: number): string[] {
 
 export function paginate(
   entries: Entry[],
-  opts: { charsPerLine: number; linesPerPage: number },
+  opts: { charsPerLine: number; linesPerPage: number; pageWidth?: number; rule?: number },
 ): { pages: Page[]; totalChars: number } {
   const { charsPerLine, linesPerPage } = opts;
+  const pageWidth = opts.pageWidth ?? 640;
+  const rule = opts.rule ?? 28;
   const pages: Page[] = [];
   let offset = 0;
 
@@ -298,8 +323,16 @@ export function paginate(
 
     for (const block of blocks) {
       if (block.kind === "draw") {
-        const rows = Math.min(block.rows ?? 6, linesPerPage);
-        if (used + rows > linesPerPage && used) push();
+        // size the figure from its own aspect ratio so it fills the page width
+        let rows = figureRows(block.svg ?? "", { pageWidth, rule, max: linesPerPage });
+        const left = linesPerPage - used;
+        // rather than jumping to a fresh page and leaving a blank band, shrink
+        // the figure into whatever room is left when there is enough of it
+        if (rows > left) {
+          if (left >= Math.max(5, Math.round(rows * 0.6))) rows = left;
+          else if (used) push();
+        }
+        rows = Math.min(rows, linesPerPage);
         current.push({ kind: "draw", text: "", offset, first: true, svg: block.svg, rows });
         used += rows;
         offset += 40;
