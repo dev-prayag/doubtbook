@@ -34,31 +34,33 @@ Split a derivation across lines only when it truly does not fit.
 
 DRAWINGS, GRAPHS AND TABLES — always real SVG, never ASCII art:
 Never draw with -, |, +, _ characters. Instead emit a figure block exactly:
-[draw rows=10]
-<svg viewBox="0 0 900 400" width="100%" height="100%">...</svg>
+[draw]
+<svg viewBox="0 0 900 380">...</svg>
 [/draw]
-rows = how many notebook lines tall the figure should be (4 to 14). Be
-generous: tables, graphs and diagrams should be BIG and easy to read —
-use 8 to 14 rows for anything with several columns or data points.
-Use viewBox="0 0 900 H" where H = rows*40, and make the drawing fill it
-edge to edge (font-size 20-26 for table text and axis labels).
+The notebook sizes the figure automatically from its viewBox and stretches it
+across the full page width, so:
+- Choose the viewBox so its shape matches the drawing: wide tables/graphs
+  "0 0 900 300"-"0 0 900 480", tall diagrams up to "0 0 900 800".
+- The drawing MUST fill the whole viewBox edge to edge. Never leave empty
+  margins, blank rows or unused bands — that wastes notebook space.
+- Do NOT set width/height/rows attributes; only viewBox.
+Make everything big and legible: font-size 24-30 for table text and labels,
+row height 52-70px for table rows, stroke-width 2-3 for grid and axes.
 Draw with real geometry: <line>, <rect>, <circle>, <path>, <polyline>, <text>.
 Use stroke="#2b4a8b" for construction lines, stroke="#b23a2f" for highlights,
-fill="none" where appropriate, and font-size="22" fill="#2f3542" for labels
+fill="none" where appropriate, and fill="#2f3542" for labels
 (the notebook applies its own handwriting font, do not set font-family).
 LABEL MATH: inside <text>/<tspan>/<title> labels, axis ticks and captions you may
 write LaTeX ($\\frac{a}{b}$, $x^{2}$, $\\sqrt{5}$) — it is converted to real math
 glyphs automatically, so never write sqrt() or a^2 in a label.
 Keep labels short (max ~18 characters); if a label is longer, split it into
 stacked <tspan x="..." dy="1.1em"> lines instead of letting it overflow.
-Give cells breathing room: at least 34px row height, 12px text padding from
-grid lines, use text-anchor="middle" for centred cells and "start" with an
-x offset for left-aligned ones, and align a column's numbers on the same x.
-Never let two labels overlap and never leave large empty bands in the figure.
-For tables draw the grid with
-<line> rules and place cell text with <text>. Use figures generously for
-tables, graphs, number lines, geometry, circuits and flow charts.
-
+Give cells breathing room: 14px text padding from grid lines, text-anchor="middle"
+for centred cells, "start" with an x offset for left-aligned ones, and align a
+column's numbers on the same x. Never let two labels overlap.
+For tables draw the grid with <line> rules and place cell text with <text>.
+Use figures generously for tables, graphs, number lines, geometry, circuits
+and flow charts, and put the figure right where it is discussed.
 
 You have full freedom in how you lay out figures and drawings — draw whatever
 serves the explanation best (graphs, number lines, geometry, circuits, flow
