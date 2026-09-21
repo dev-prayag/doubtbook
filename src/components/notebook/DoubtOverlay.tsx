@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, Sparkles, X } from "lucide-react";
 import { InkText } from "./Ink";
+import { FluidButton, SpringSheet } from "@/components/ui/fluid";
 
 export type DoubtMessage = { role: "you" | "ai"; text: string };
 
@@ -44,8 +45,8 @@ export function DoubtOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-stretch justify-center bg-desk-2/70 p-0 backdrop-blur-md sm:items-center sm:p-6">
-      <div className="glass relative flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-none text-paper sm:h-[85vh] sm:rounded-3xl">
+    <div className="glass-backdrop fixed inset-0 z-[60] flex items-stretch justify-center bg-desk-2/70 p-0 backdrop-blur-md sm:items-center sm:p-6">
+      <SpringSheet side="center" className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-none text-paper sm:h-[85vh] sm:rounded-3xl">
         <header className="flex items-start gap-2 border-b border-paper/15 p-4">
           <Sparkles className="mt-0.5 size-4 shrink-0 text-paper/70" />
           <div className="min-w-0 flex-1">
@@ -54,13 +55,13 @@ export function DoubtOverlay({
               circled: “{selection.slice(0, 120)}”
             </p>
           </div>
-          <button
+          <FluidButton
             onClick={onClose}
             aria-label="Close doubt chat"
             className="grid size-9 shrink-0 place-items-center rounded-full bg-paper/10 hover:bg-paper/20"
           >
             <X className="size-4" />
-          </button>
+          </FluidButton>
         </header>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
@@ -101,16 +102,16 @@ export function DoubtOverlay({
             placeholder="Ask another follow-up…"
             className="max-h-28 min-h-9 flex-1 resize-none rounded-xl bg-paper/10 px-3 py-2 text-sm text-paper outline-none placeholder:text-paper/40"
           />
-          <button
+          <FluidButton
             onClick={send}
             disabled={busy}
             aria-label="Send doubt"
             className="grid size-9 shrink-0 place-items-center rounded-xl bg-paper text-desk-2 disabled:opacity-40"
           >
             <Send className="size-4" />
-          </button>
+          </FluidButton>
         </div>
-      </div>
+      </SpringSheet>
     </div>
   );
 }
