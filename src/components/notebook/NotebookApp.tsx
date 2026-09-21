@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
@@ -33,6 +33,7 @@ import {
 } from "@/lib/notebook";
 import { buildPdf, capturePage, nextFrame } from "@/lib/pdf";
 import { useDictation } from "@/hooks/use-dictation";
+import { FluidButton, GlassSurface, SpringSheet } from "@/components/ui/fluid";
 
 function persist(chat: Chat) {
   try {
@@ -69,6 +70,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   const [ocrEntryId, setOcrEntryId] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [pageDrag, setPageDrag] = useState({ x: 0, active: false });
   const dictation = useDictation((text) =>
     setInput((q) => (q.trim() ? `${q.trim()} ${text}` : text)),
   );
@@ -80,6 +82,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   const animating = useRef(false);
   const started = useRef<string | null>(null);
   const ocrStarted = useRef<string | null>(null);
+  const pageGesture = useRef({ startX: 0, lastX: 0, lastAt: 0, velocity: 0 });
 
   /* ---------- load chat ---------- */
   useEffect(() => {
@@ -441,6 +444,40 @@ export function NotebookApp({ chatId }: { chatId: string }) {
   const page = pages[pageIndex];
   const ocrEntry = chat?.entries.find((e) => e.id === ocrEntryId);
 
+  const startPageGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (lasso || pages.length < 2) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const now = performance.now();
+    pageGesture.current = { startX: event.clientX, lastX: event.clientX, lastAt: now, velocity: 0 };
+    setPageDrag({ x: 0, active: true });
+  };
+
+  const movePageGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!pageDrag.active) return;
+    const now = performance.now();
+    const elapsed = Math.max(1, now - pageGesture.current.lastAt);
+    pageGesture.current.velocity = (event.clientX - pageGesture.current.lastX) / elapsed;
+    pageGesture.current.lastX = event.clientX;
+    pageGesture.current.lastAt = now;
+    const raw = event.clientX - pageGesture.current.startX;
+    const atEdge = (raw > 0 && pageIndex === 0) || (raw < 0 && pageIndex === pages.length - 1);
+    setPageDrag({ x: atEdge ? raw * 0.24 : raw, active: true });
+  };
+
+  const finishPageGesture = () => {
+    if (!pageDrag.active) return;
+    const projected = pageDrag.x + pageGesture.current.velocity * 150;
+    const threshold = Math.min(120, dims.pageWidth * 0.2);
+    if (projected < -threshold && pageIndex < pages.length - 1) {
+      animating.current = false;
+      setPageIndex((index) => index + 1);
+    } else if (projected > threshold && pageIndex > 0) {
+      animating.current = false;
+      setPageIndex((index) => index - 1);
+    }
+    setPageDrag({ x: 0, active: false });
+  };
+
   return (
     <div className="desk-bg flex h-[100dvh] w-full flex-col overflow-hidden">
       {/* notebook */}
@@ -449,7 +486,19 @@ export function NotebookApp({ chatId }: { chatId: string }) {
           className="relative mx-auto h-full w-full max-w-3xl rounded-xl bg-paper-edge p-1.5 shadow-[var(--shadow-book)]"
           style={{ backgroundImage: "linear-gradient(90deg, oklch(0.55 0.05 250) 0 18px, transparent 18px)" }}
         >
-          <div ref={pageRef} className="relative h-full w-full">
+          <div
+            ref={pageRef}
+            className="page-spring relative h-full w-full"
+            style={{
+              transform: `translate3d(${pageDrag.x}px, 0, 0) rotateY(${pageDrag.x / Math.max(36, dims.pageWidth) * -5}deg)`,
+              opacity: Math.max(0.82, 1 - Math.abs(pageDrag.x) / Math.max(500, dims.pageWidth * 1.8)),
+              transition: pageDrag.active ? "none" : undefined,
+            }}
+            onPointerDown={startPageGesture}
+            onPointerMove={movePageGesture}
+            onPointerUp={finishPageGesture}
+            onPointerCancel={finishPageGesture}
+          >
             <NotebookPage
               page={page}
               reveal={reveal}
@@ -485,15 +534,15 @@ export function NotebookApp({ chatId }: { chatId: string }) {
             <p className="text-center text-xs text-paper/70">Listening… tap the mic to stop.</p>
           )}
           <div className="flex items-center gap-2">
-            <button
+            <FluidButton
               onClick={() => setMenuOpen(true)}
-              className="glass grid size-10 place-items-center rounded-xl text-paper/90"
+              className="aqua-glass grid size-10 place-items-center rounded-xl text-paper/90"
               aria-label="Open menu"
             >
               <Menu className="size-5" />
-            </button>
-            <div className="glass flex items-center gap-1 rounded-xl px-1 py-1 text-paper/90">
-              <button
+            </FluidButton>
+            <GlassSurface className="flex items-center gap-1 rounded-xl px-1 py-1 text-paper/90">
+              <FluidButton
                 onClick={() => {
                   animating.current = false;
                   setPageIndex((i) => Math.max(0, i - 1));
@@ -503,11 +552,11 @@ export function NotebookApp({ chatId }: { chatId: string }) {
                 aria-label="Previous page"
               >
                 <ChevronLeft className="size-5" />
-              </button>
+              </FluidButton>
               <span className="min-w-12 text-center font-[family-name:var(--font-hand)] text-sm">
                 {Math.min(pageIndex + 1, Math.max(1, pages.length))}/{Math.max(1, pages.length)}
               </span>
-              <button
+              <FluidButton
                 onClick={() => {
                   animating.current = false;
                   setPageIndex((i) => Math.min(pages.length - 1, i + 1));
@@ -517,59 +566,59 @@ export function NotebookApp({ chatId }: { chatId: string }) {
                 aria-label="Next page"
               >
                 <ChevronRight className="size-5" />
-              </button>
-            </div>
+              </FluidButton>
+            </GlassSurface>
             <div className="flex-1" />
-            <div className="glass flex rounded-xl p-1 text-xs text-paper/90">
+            <GlassSurface className="flex rounded-xl p-1 text-xs text-paper/90">
               {(["solve", "notes"] as const).map((m) => (
-                <button
+                <FluidButton
                   key={m}
                   onClick={() => setMode(m)}
                   className={`rounded-lg px-3 py-1.5 capitalize ${mode === m ? "bg-paper/85 text-desk-2 font-semibold" : ""}`}
                 >
                   {m}
-                </button>
+                </FluidButton>
               ))}
-            </div>
-            <button
+            </GlassSurface>
+            <FluidButton
               onClick={() => {
                 setLasso((v) => !v);
                 setSelection(null);
               }}
-              className={`grid size-10 place-items-center rounded-xl ${lasso ? "bg-ink-marker text-paper" : "glass text-paper/90"}`}
+              className={`grid size-10 place-items-center rounded-xl ${lasso ? "bg-ink-marker text-paper shadow-lg" : "aqua-glass text-paper/90"}`}
               aria-label="Lasso select"
               title="Circle something on the page to ask about it"
             >
               <Pencil className="size-5" />
-            </button>
+            </FluidButton>
           </div>
 
-          <div className="glass flex items-end gap-2 rounded-2xl p-2">
+          <GlassSurface className="flex items-end gap-2 rounded-2xl p-2">
             <div className="relative shrink-0">
-              <button
+              <FluidButton
                 onClick={() => setPhotoMenu((v) => !v)}
                 className="grid size-9 place-items-center rounded-lg text-paper/80 hover:bg-paper/10"
                 aria-label="Add a photo"
               >
                 <ImagePlus className="size-5" />
-              </button>
+              </FluidButton>
               {photoMenu && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setPhotoMenu(false)} />
-                  <div className="glass absolute bottom-11 left-0 z-40 w-44 overflow-hidden rounded-xl text-sm text-paper">
-                    <button
+                  <SpringSheet side="bottom" className="absolute bottom-11 left-0 z-40 w-44 overflow-hidden rounded-xl text-sm text-paper">
+                    <FluidButton
                       onClick={() => cameraRef.current?.click()}
                       className="flex w-full items-center gap-2 px-3 py-2.5 hover:bg-paper/10"
                     >
                       <Camera className="size-4" /> Take a photo
-                    </button>
-                    <button
+                    </FluidButton>
+                    <FluidButton
                       onClick={() => galleryRef.current?.click()}
                       className="flex w-full items-center gap-2 px-3 py-2.5 hover:bg-paper/10"
                     >
                       <ImageIcon className="size-4" /> Choose from photos
-                    </button>
-                  </div>
+                    </FluidButton>
+                  </SpringSheet>
                 </>
               )}
               <input
@@ -609,7 +658,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
               placeholder={mode === "notes" ? "Topic for notes…" : "Ask your next doubt…"}
               className="max-h-24 min-h-9 flex-1 resize-none bg-transparent py-1.5 font-[family-name:var(--font-hand)] text-lg text-paper outline-none placeholder:text-paper/40"
             />
-            <button
+            <FluidButton
               onClick={dictation.toggle}
               disabled={dictation.transcribing}
               className={`grid size-9 shrink-0 place-items-center rounded-lg ${
@@ -625,16 +674,16 @@ export function NotebookApp({ chatId }: { chatId: string }) {
               ) : (
                 <Mic className="size-5" />
               )}
-            </button>
-            <button
+            </FluidButton>
+            <FluidButton
               onClick={ask}
               disabled={busy}
               className="grid size-9 shrink-0 place-items-center rounded-lg bg-paper text-desk-2 disabled:opacity-40"
               aria-label="Ask"
             >
               <Send className="size-4" />
-            </button>
-          </div>
+            </FluidButton>
+          </GlassSurface>
         </div>
       </div>
 
@@ -664,16 +713,17 @@ export function NotebookApp({ chatId }: { chatId: string }) {
       {/* menu */}
       {menuOpen && (
         <div data-export-ignore className="fixed inset-0 z-50 flex" onClick={() => setMenuOpen(false)}>
-          <div className="absolute inset-0 bg-desk-2/60 backdrop-blur-sm" />
-          <div
-            className="glass relative h-full w-80 max-w-[85vw] overflow-y-auto p-4 text-paper"
+          <div className="glass-backdrop absolute inset-0 bg-desk-2/60 backdrop-blur-sm" />
+          <SpringSheet
+            side="left"
+            className="relative h-full w-80 max-w-[85vw] overflow-y-auto rounded-none p-4 text-paper"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center gap-2">
               <BookOpen className="size-5" />
               <h2 className="font-[family-name:var(--font-hand)] text-2xl">My notebooks</h2>
             </div>
-            <button
+            <FluidButton
               onClick={() => {
                 const id = newId();
                 persist({ id, title: "New doubt", createdAt: Date.now(), entries: [] });
@@ -683,15 +733,15 @@ export function NotebookApp({ chatId }: { chatId: string }) {
               className="mb-2 flex w-full items-center gap-2 rounded-xl bg-paper/90 px-3 py-2 text-desk-2"
             >
               <Plus className="size-4" /> New notebook
-            </button>
-            <button
+            </FluidButton>
+            <FluidButton
               onClick={() => void exportPdf()}
               disabled={!pages.length || exporting}
               className="mb-4 flex w-full items-center gap-2 rounded-xl bg-paper/10 px-3 py-2 text-sm text-paper disabled:opacity-40"
             >
               <Download className="size-4" />
               {exporting ? "Building PDF…" : "Export this notebook as PDF"}
-            </button>
+            </FluidButton>
             <ul className="space-y-1">
               {chats.map((c) => (
                 <li
@@ -706,7 +756,7 @@ export function NotebookApp({ chatId }: { chatId: string }) {
                   >
                     {c.title || "Untitled"}
                   </Link>
-                  <button
+                  <FluidButton
                     onClick={() => {
                       deleteChat(c.id);
                       setChats(loadChats());
@@ -716,13 +766,13 @@ export function NotebookApp({ chatId }: { chatId: string }) {
                     aria-label="Delete notebook"
                   >
                     <Trash2 className="size-4" />
-                  </button>
+                  </FluidButton>
                 </li>
               ))}
               {chats.length === 0 && <li className="text-sm text-paper/60">No saved notebooks yet.</li>}
             </ul>
             <p className="mt-6 text-xs text-paper/50">Notebooks are saved in this browser only.</p>
-          </div>
+          </SpringSheet>
         </div>
       )}
     </div>

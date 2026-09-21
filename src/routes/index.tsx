@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ImagePlus, Loader2, Mic, Send, Sparkles, Square } from "lucide-react";
 import { useDictation } from "@/hooks/use-dictation";
 import { newId, saveChat, type Chat, type Entry } from "@/lib/notebook";
+import { FluidButton, GlassSurface } from "@/components/ui/fluid";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -73,16 +74,16 @@ function Landing() {
           full solution — then circle anything you didn't get.
         </p>
 
-        <div className="glass mt-8 rounded-2xl p-3 text-left">
+        <GlassSurface className="spring-sheet spring-sheet-bottom mt-8 rounded-2xl p-3 text-left">
           <div className="mb-2 flex rounded-xl bg-paper/10 p-1 text-xs text-paper/80">
             {(["solve", "notes"] as const).map((m) => (
-              <button
+              <FluidButton
                 key={m}
                 onClick={() => setMode(m)}
                 className={`flex-1 rounded-lg px-3 py-1.5 capitalize ${mode === m ? "bg-paper/90 font-semibold text-desk-2" : ""}`}
               >
                 {m === "solve" ? "Solve a doubt" : "Make notes"}
-              </button>
+              </FluidButton>
             ))}
           </div>
           <textarea
@@ -125,7 +126,7 @@ function Landing() {
               <img src={image} alt="Question photo" className="size-9 rounded-md object-cover" />
             )}
             <div className="flex-1" />
-            <button
+            <FluidButton
               onClick={dictation.toggle}
               disabled={dictation.transcribing}
               className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${
@@ -143,18 +144,18 @@ function Landing() {
                 <Mic className="size-4" />
               )}
               {dictation.transcribing ? "Writing…" : dictation.recording ? "Stop" : "Speak"}
-            </button>
-            <button
+            </FluidButton>
+            <FluidButton
               onClick={start}
               className="inline-flex items-center gap-2 rounded-xl bg-paper px-4 py-2 text-sm font-semibold text-desk-2"
             >
               Open notebook <Send className="size-4" />
-            </button>
+            </FluidButton>
           </div>
           {dictation.error && (
             <p className="mt-2 text-xs text-ink-red/90">{dictation.error}</p>
           )}
-        </div>
+        </GlassSurface>
       </div>
     </main>
   );
