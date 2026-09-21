@@ -1,6 +1,7 @@
 import { Check, Loader2, X } from "lucide-react";
 import type { Ocr } from "@/lib/notebook";
 import { InkText } from "./Ink";
+import { FluidButton, SpringSheet } from "@/components/ui/fluid";
 
 /**
  * Shows what was read from an uploaded photo before solving: the transcription
@@ -32,8 +33,8 @@ export function OcrPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-stretch justify-center bg-desk-2/70 p-0 backdrop-blur-md sm:items-center sm:p-6">
-      <div className="glass relative flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-none text-paper sm:h-[85vh] sm:rounded-3xl">
+    <div className="glass-backdrop fixed inset-0 z-[60] flex items-stretch justify-center bg-desk-2/70 p-0 backdrop-blur-md sm:items-center sm:p-6">
+      <SpringSheet side="center" className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-none text-paper sm:h-[85vh] sm:rounded-3xl">
         <header className="flex items-center gap-2 border-b border-paper/15 p-4">
           <div className="min-w-0 flex-1">
             <p className="font-[family-name:var(--font-hand)] text-2xl leading-none">
@@ -45,13 +46,13 @@ export function OcrPanel({
                 : `${questions.length} question${questions.length === 1 ? "" : "s"} detected — check before solving.`}
             </p>
           </div>
-          <button
+          <FluidButton
             onClick={onCancel}
             aria-label="Close photo reader"
             className="grid size-9 shrink-0 place-items-center rounded-full bg-paper/10 hover:bg-paper/20"
           >
             <X className="size-4" />
-          </button>
+          </FluidButton>
         </header>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -110,22 +111,22 @@ export function OcrPanel({
         </div>
 
         <div className="flex items-center gap-2 border-t border-paper/15 p-3">
-          <button
+          <FluidButton
             onClick={onCancel}
             className="rounded-xl bg-paper/10 px-4 py-2 text-sm text-paper/80"
           >
             Cancel
-          </button>
+          </FluidButton>
           <div className="flex-1" />
-          <button
+          <FluidButton
             onClick={onSolve}
             disabled={loading}
             className="flex items-center gap-2 rounded-xl bg-paper px-4 py-2 text-sm font-semibold text-desk-2 disabled:opacity-40"
           >
             <Check className="size-4" /> Solve in notebook
-          </button>
+          </FluidButton>
         </div>
-      </div>
+      </SpringSheet>
     </div>
   );
 }
